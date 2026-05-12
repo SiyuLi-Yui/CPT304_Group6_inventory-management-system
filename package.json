@@ -1,0 +1,15 @@
+{
+  "name": "inventory-management-system-main",
+  "version": "1.0.0",
+  "description": "This repository contains the source code for a web-based inventory management system with CRUD functionality. The theme of the web app follows the famous clothing brand, named 'UNIQLO'. This project was created for one of my internship interview's technical assessment.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.59.1"
+  }
+}
