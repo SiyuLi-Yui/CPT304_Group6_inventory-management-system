@@ -18,7 +18,8 @@
  }
  
  button.add_button {
-	 height: 43px;
+	 height: 44px;
+	 min-height: 44px;
 	 border-radius: 12px !important;
 	 font-family: Nunito !important; 
 	 font-size: calc(0.58vw + 0.58vh) !important; 
@@ -35,7 +36,8 @@
  }
  
  button.data_button {
-	 height: 43px;
+	 height: 44px;
+	 min-height: 44px;
 	 border-radius: 12px !important;
 	 font-family: Nunito !important; 
 	 font-size: calc(0.58vw + 0.58vh) !important; 
@@ -51,15 +53,16 @@
  }
  
  button.data_button:hover {
-	 height: 43px;
+	 height: 44px;
+	 min-height: 44px;
 	 border-radius: 12px !important;
 	 font-family: Nunito !important; 
 	 font-size: calc(0.58vw + 0.58vh) !important; 
 	 width: auto; 
 	 color: white !important;
 	 font-weight: bold;
-	 border: solid 2px gray !important;
-	 background-color: gray !important;
+	 border: solid 2px #595959 !important;
+	 background-color: #595959 !important;
 	 margin-right: 10px !important;
 	 padding-right: 25px !important;
 	 padding-left: 25px !important;
@@ -67,15 +70,16 @@
  }
  
  button.add_button:hover {
-	 height: 43px;
+	 height: 44px;
+	 min-height: 44px;
 	 border-radius: 12px !important;
 	 font-family: Nunito !important; 
 	 font-size: calc(0.58vw + 0.58vh) !important; 
 	 width: auto; 
 	 color: white !important;
 	 font-weight: bold;
-	 border: solid 2px gray !important;
-	 background-color: gray !important;
+	 border: solid 2px #595959 !important;
+	 background-color: #595959 !important;
 	 margin-right: 10px !important;
 	 padding-right: 25px !important;
 	 padding-left: 25px !important;
@@ -83,7 +87,8 @@
  }
  
  button.modal_button {
-	 height: 43px;
+	 height: 44px;
+	 min-height: 44px;
 	 border-radius: 12px !important;
 	 font-family: Nunito !important; 
 	 font-size: calc(0.63vw + 0.63vh) !important; 
@@ -99,7 +104,8 @@
  }
  
  button.modal_button:hover {
-	 height: 43px;
+	 height: 44px;
+	 min-height: 44px;
 	 border-radius: 12px !important;
 	 font-family: Nunito !important; 
 	 font-size: calc(0.63vw + 0.63vh) !important; 
@@ -119,6 +125,30 @@
   transition: 0.3s;
  }
 
-.menu_button:focus .square_bg {
-    color: rgba(255,255,255,0.5) !important;
+ .menu_button:focus .square_bg {
+     color: rgba(255,255,255,0.5) !important;
+ }
+
+ .menu_button {
+	 min-width: 44px;
+	 min-height: 44px;
+	 display: inline-flex;
+	 align-items: center;
+	 justify-content: center;
+ }
+
+ .btn-close {
+	 min-width: 44px;
+	 min-height: 44px;
+ }
+
+ #myTable td.editor-edit,
+ #myTable td.editor-delete {
+	 min-width: 44px;
+	 min-height: 44px;
+	 cursor: pointer;
+ }
+
+ .form-control {
+	 min-height: 44px;
  }
