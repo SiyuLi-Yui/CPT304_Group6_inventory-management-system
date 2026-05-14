@@ -34,6 +34,97 @@ $(document).ready(function () {
     };
 
     let dataSrc = Storage.load();
+    let selectedDeleteElement = null;
+    let selectedEditElement = null;
+    let actionLocked = false;
+    let activeButton = null;
+    let lastLoadButton = null;
+    let lastSortTime = 0;
+    const buttonContent = new WeakMap();
+    const loadingHtml = '<span class="button-loading-spinner" aria-hidden="true"></span><span>Loading...</span>';
+
+    $('head').append('<style>.button-loading-spinner{display:inline-block;width:0.9em;height:0.9em;margin-right:0.45em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-0.15em;animation:button-loading-spin 0.8s linear infinite}@keyframes button-loading-spin{to{transform:rotate(360deg)}}#global_loading_panel{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:2000;background:rgba(0,0,0,0.86);color:#fff;padding:10px 18px;border-radius:22px;font-family:Nunito,Arial,sans-serif;font-size:14px;box-shadow:0 3px 12px rgba(0,0,0,0.25);display:none}</style>');
+    $('body').append('<div id="global_loading_panel" role="status" aria-live="polite">Please wait...</div>');
+
+    function getButton(control) {
+        if (!control) return null;
+        const node = control.jquery ? control : $(control);
+        if (node.is('button')) return node.get(0);
+        const found = node.closest('button').get(0) || node.find('button').get(0);
+        return found || null;
+    }
+
+    function getButtonByText(text) {
+        let target = null;
+        $('button').each(function () {
+            if ($.trim($(this).text()) === text) {
+                target = this;
+                return false;
+            }
+        });
+        return target;
+    }
+
+    function setLoadingMessage(message) {
+        $('#global_loading_panel').text(message || 'Please wait...').fadeIn(100);
+    }
+
+    function hideLoadingMessage() {
+        $('#global_loading_panel').fadeOut(100);
+    }
+
+    function lockInterface(control, message) {
+        if (actionLocked) return false;
+        actionLocked = true;
+        activeButton = getButton(control);
+        $('button').each(function () {
+            this.disabled = true;
+            this.setAttribute('aria-disabled', 'true');
+        });
+        if (activeButton) {
+            if (!buttonContent.has(activeButton)) {
+                buttonContent.set(activeButton, activeButton.innerHTML);
+            }
+            activeButton.setAttribute('aria-busy', 'true');
+            activeButton.innerHTML = loadingHtml;
+        }
+        setLoadingMessage(message);
+        return true;
+    }
+
+    function unlockInterface() {
+        if (activeButton && buttonContent.has(activeButton)) {
+            activeButton.innerHTML = buttonContent.get(activeButton);
+            activeButton.removeAttribute('aria-busy');
+        }
+        $('button').each(function () {
+            this.disabled = false;
+            this.removeAttribute('aria-disabled');
+        });
+        activeButton = null;
+        actionLocked = false;
+        hideLoadingMessage();
+        updateInterfaceState();
+    }
+
+    function runWithLock(control, message, action, delay) {
+        if (!lockInterface(control, message)) return;
+        const minimumDelay = delay || 350;
+        const startedAt = Date.now();
+        try {
+            action();
+        } catch (error) {
+            alert('The action could not be completed. Please try again.');
+            console.error(error);
+        } finally {
+            const remaining = Math.max(0, minimumDelay - (Date.now() - startedAt));
+            setTimeout(unlockInterface, remaining);
+        }
+    }
+
+    function finishAsyncAction() {
+        setTimeout(unlockInterface, 350);
+    }
 
     const datatable = $('#myTable').DataTable({
         data: dataSrc,
@@ -66,31 +157,42 @@ $(document).ready(function () {
         buttons: [
             {
                 text: 'ADD NEW ITEM',
-                action: function (e, dt) {
-                    $('#addModal').modal('toggle');
+                action: function (e, dt, node) {
+                    runWithLock(node, 'Opening form, please wait...', function () {
+                        $('#addModal').modal('toggle');
+                    }, 300);
                 }
             },
             {
                 text: 'SAVE DATA',
-                action: function (e, dt) {
-                    const data = dt.buttons.exportData();
-                    $.fn.dataTable.fileSave(
-                        new Blob([JSON.stringify(data)]),
-                        'DB.txt'
-                    );
-                    Storage.save(dt.data().toArray());
+                action: function (e, dt, node) {
+                    runWithLock(node, 'Saving data, please wait...', function () {
+                        const data = dt.buttons.exportData();
+                        $.fn.dataTable.fileSave(
+                            new Blob([JSON.stringify(data)]),
+                            'DB.txt'
+                        );
+                        Storage.save(dt.data().toArray());
+                    }, 500);
                 }
             },
             {
                 text: 'NEW DATA',
-                action: function (e, dt) {
-                    $('#addModal').modal('toggle');
-                    Storage.clear();
-                    dt.clear().draw();
+                action: function (e, dt, node) {
+                    runWithLock(node, 'Preparing new data, please wait...', function () {
+                        Storage.clear();
+                        dt.clear().draw();
+                        $('#addModal').modal('toggle');
+                    }, 500);
                 }
             },
             {
-                text: 'LOAD DATA'
+                text: 'LOAD DATA',
+                action: function (e, dt, node) {
+                    if (actionLocked) return;
+                    lastLoadButton = getButton(node);
+                    document.getElementById('upload_data').click();
+                }
             }
         ]
     });
@@ -98,85 +200,128 @@ $(document).ready(function () {
     function updateInterfaceState() {
         const rowCount = datatable.rows().count();
         const emptyAnimation = $('#empty_animation');
-        const buttons = document.getElementsByTagName('button');
 
         if (rowCount > 0) {
             emptyAnimation.hide();
-            for (let i = 0; i < buttons.length; i++) {
-                if (buttons[i].innerHTML === '<span>ADD NEW ITEM</span>') buttons[i].hidden = false;
-                if (buttons[i].innerHTML === '<span>SAVE DATA</span>') buttons[i].hidden = false;
-                if (buttons[i].innerHTML === '<span>LOAD DATA</span>') buttons[i].hidden = true;
-                if (buttons[i].innerHTML === '<span>NEW DATA</span>') buttons[i].hidden = true;
-            }
+            $('button').each(function () {
+                const label = $.trim($(this).text());
+                if (label === 'ADD NEW ITEM') this.hidden = false;
+                if (label === 'SAVE DATA') this.hidden = false;
+                if (label === 'LOAD DATA') this.hidden = true;
+                if (label === 'NEW DATA') this.hidden = true;
+            });
         } else {
             emptyAnimation.show();
-            for (let i = 0; i < buttons.length; i++) {
-                if (buttons[i].innerHTML === '<span>ADD NEW ITEM</span>') buttons[i].hidden = true;
-                if (buttons[i].innerHTML === '<span>SAVE DATA</span>') buttons[i].hidden = true;
-                if (buttons[i].innerHTML === '<span>LOAD DATA</span>') buttons[i].hidden = false;
-                if (buttons[i].innerHTML === '<span>NEW DATA</span>') buttons[i].hidden = false;
-            }
+            $('button').each(function () {
+                const label = $.trim($(this).text());
+                if (label === 'ADD NEW ITEM') this.hidden = true;
+                if (label === 'SAVE DATA') this.hidden = true;
+                if (label === 'LOAD DATA') this.hidden = false;
+                if (label === 'NEW DATA') this.hidden = false;
+            });
         }
 
         Storage.save(datatable.data().toArray());
     }
 
-    let selectedDeleteElement = null;
-    let selectedEditElement = null;
+    const header = document.querySelector('#myTable thead');
+    if (header) {
+        header.addEventListener('click', function (event) {
+            const th = event.target.closest('th');
+            if (!th || th.cellIndex >= 5) return;
+            const now = Date.now();
+            if (now - lastSortTime < 500) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                return false;
+            }
+            lastSortTime = now;
+        }, true);
+        header.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            const th = event.target.closest('th');
+            if (!th || th.cellIndex >= 5) return;
+            const now = Date.now();
+            if (now - lastSortTime < 500) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                return false;
+            }
+            lastSortTime = now;
+        }, true);
+    }
 
-    $('#myTable').on('click', 'td.editor-delete', function () {
-        selectedDeleteElement = this;
-        $('#deleteModal').modal('toggle');
-        $('#delete_button').off('click').on('click', function () {
-            datatable.row($(selectedDeleteElement).parents('tr')).remove().draw();
-            updateInterfaceState();
-        });
+    $('#myTable').on('click', 'button.editor-delete-button', function () {
+        const button = this;
+        const row = $(this).closest('tr').get(0);
+        runWithLock(button, 'Opening delete confirmation, please wait...', function () {
+            selectedDeleteElement = row;
+            $('#deleteModal').modal('toggle');
+        }, 300);
     });
 
-    $('#myTable').on('click', 'td.editor-edit', function () {
-        selectedEditElement = this;
-        const rowData = datatable.row(selectedEditElement).data();
-        $('#edit_itemname').val(rowData[0]);
-        $('#edit_quantity').val(rowData[1]);
-        $('#edit_type').val(rowData[2]);
-        $('#edit_unit_price').val(rowData[3]);
-        $('#edit_total_price').val(rowData[4]);
-        $('#editModal').modal('toggle');
+    $('#delete_button').on('click', function () {
+        const button = this;
+        if (!selectedDeleteElement) return;
+        runWithLock(button, 'Deleting item, please wait...', function () {
+            datatable.row(selectedDeleteElement).remove().draw();
+            selectedDeleteElement = null;
+        }, 450);
+    });
+
+    $('#myTable').on('click', 'button.editor-edit-button', function () {
+        const button = this;
+        const row = $(this).closest('tr').get(0);
+        runWithLock(button, 'Opening edit form, please wait...', function () {
+            selectedEditElement = row;
+            const rowData = datatable.row(row).data();
+            $('#edit_itemname').val(rowData[0]);
+            $('#edit_quantity').val(rowData[1]);
+            $('#edit_type').val(rowData[2]);
+            $('#edit_unit_price').val(rowData[3]);
+            $('#edit_total_price').val(rowData[4]);
+            $('#editModal').modal('toggle');
+        }, 300);
     });
 
     $('#edit_data').on('submit', function (event) {
         event.preventDefault();
-        const quantity = parseFloat($('#edit_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
-        const unitPrice = parseFloat($('#edit_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);
-        const updatedRow = [
-            $('#edit_itemname').val(),
-            quantity,
-            $('#edit_type').val(),
-            'RM ' + unitPrice,
-            $('#edit_total_price').val()
-        ];
-        datatable.row(selectedEditElement).data(updatedRow).draw();
-        updateInterfaceState();
-        $('#editModal').modal('toggle');
-        $('#updateConfirmationModal').modal('toggle');
+        const button = $('#update_button').get(0);
+        runWithLock(button, 'Updating item, please wait...', function () {
+            const quantity = parseFloat($('#edit_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
+            const unitPrice = parseFloat($('#edit_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);
+            const updatedRow = [
+                $('#edit_itemname').val(),
+                quantity,
+                $('#edit_type').val(),
+                'RM ' + unitPrice,
+                $('#edit_total_price').val()
+            ];
+            datatable.row(selectedEditElement).data(updatedRow).draw();
+            selectedEditElement = null;
+            $('#editModal').modal('toggle');
+            $('#updateConfirmationModal').modal('toggle');
+        }, 450);
     });
 
     $('#add_data').on('submit', function (event) {
         event.preventDefault();
-        const quantity = parseFloat($('#add_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
-        const unitPrice = parseFloat($('#add_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);
-        const newRow = [
-            $('#add_itemname').val(),
-            quantity,
-            $('#add_type').val(),
-            'RM ' + unitPrice,
-            $('#add_total_price').val()
-        ];
-        datatable.row.add(newRow).draw();
-        updateInterfaceState();
-        $('#addModal').modal('toggle');
-        $('#addConfirmationModal').modal('toggle');
-        $('#add_itemname, #add_quantity, #add_type, #add_unit_price, #add_total_price').val('');
+        const button = $('#add_button').get(0);
+        runWithLock(button, 'Adding item, please wait...', function () {
+            const quantity = parseFloat($('#add_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
+            const unitPrice = parseFloat($('#add_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);
+            const newRow = [
+                $('#add_itemname').val(),
+                quantity,
+                $('#add_type').val(),
+                'RM ' + unitPrice,
+                $('#add_total_price').val()
+            ];
+            datatable.row.add(newRow).draw();
+            $('#addModal').modal('toggle');
+            $('#addConfirmationModal').modal('toggle');
+            $('#add_itemname, #add_quantity, #add_type, #add_unit_price, #add_total_price').val('');
+        }, 450);
     });
 
     $('#edit_quantity').on('keyup', function () {
@@ -213,14 +358,14 @@ $(document).ready(function () {
 
     const buttonElements = document.getElementsByTagName('button');
     for (let i = 0; i < buttonElements.length; i++) {
-        if (buttonElements[i].innerHTML === '<span>ADD NEW ITEM</span>') {
+        const label = $.trim($(buttonElements[i]).text());
+        if (label === 'ADD NEW ITEM') {
             buttonElements[i].classList.add('add_button');
-        } else if (buttonElements[i].innerHTML === '<span>SAVE DATA</span>') {
+        } else if (label === 'SAVE DATA') {
             buttonElements[i].classList.add('data_button');
-        } else if (buttonElements[i].innerHTML === '<span>LOAD DATA</span>') {
+        } else if (label === 'LOAD DATA') {
             buttonElements[i].classList.add('data_button');
-            buttonElements[i].setAttribute('onclick', 'document.getElementById(\'upload_data\').click();');
-        } else if (buttonElements[i].innerHTML === '<span>NEW DATA</span>') {
+        } else if (label === 'NEW DATA') {
             buttonElements[i].classList.add('add_button');
         }
     }
@@ -228,14 +373,29 @@ $(document).ready(function () {
     function readSingleFile(e) {
         const file = e.target.files[0];
         if (!file) return;
+        if (!lockInterface(lastLoadButton || getButtonByText('LOAD DATA'), 'Loading data, please wait...')) return;
         const reader = new FileReader();
-        reader.onload = function (e) {
-            const contents = e.target.result;
-            const importedData = JSON.parse(contents.split('"body":')[1].split('}')[0]);
-            $('#myTable').dataTable().fnClearTable();
-            $('#myTable').dataTable().fnAddData(importedData);
-            updateInterfaceState();
+        reader.onload = function (event) {
+            try {
+                const contents = event.target.result;
+                const importedData = JSON.parse(contents.split('"body":')[1].split('}')[0]);
+                $('#myTable').dataTable().fnClearTable();
+                $('#myTable').dataTable().fnAddData(importedData);
+                updateInterfaceState();
+            } catch (error) {
+                alert('The selected file could not be loaded. Please check the file and try again.');
+                console.error(error);
+            } finally {
+                document.getElementById('upload_data').value = '';
+                lastLoadButton = null;
+                finishAsyncAction();
+            }
+        };
+        reader.onerror = function () {
+            alert('The selected file could not be read. Please try again.');
             document.getElementById('upload_data').value = '';
+            lastLoadButton = null;
+            finishAsyncAction();
         };
         reader.readAsText(file);
     }
