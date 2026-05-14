@@ -4,21 +4,7 @@
 <head>
     <meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no, user-scalable=yes">
-	<script>
-		(function () {
-			function removeMetaRefresh() {
-				document.querySelectorAll('meta[http-equiv="refresh" i]').forEach(function (node) {
-					node.remove();
-				});
-			}
 
-			removeMetaRefresh();
-			document.addEventListener('DOMContentLoaded', removeMetaRefresh);
-
-			var observer = new MutationObserver(removeMetaRefresh);
-			observer.observe(document.documentElement, { childList: true, subtree: true });
-		})();
-	</script>
     <title>UNIQLO Inventory System</title>
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
@@ -35,262 +21,240 @@
 	<link rel="stylesheet" href="assets/bootstrap/css/inventory.css">
 	<script src="assets/js/jquery.min.js"></script>
 	<script src="assets/js/datatables.min.js"></script>
-	<script type="text/javascript">
-		$(document).ready( function () {
-			var dataSrc = "";
-		
-			var datatable = $('#myTable').DataTable( {
-				data : dataSrc,
-				columns: [
-					null,
-					null,
-					null,
-					null,
-					null,
-					{
-						data: null,
-						className: "dt-center editor-edit",
-						defaultContent: '<button type="button" class="editor-action-button editor-edit-button" aria-label="Edit item"><i class="fas fa-pencil-alt" aria-hidden="true"></i></button>',
-						orderable: false
-					},
-					{
-						data: null,
-						className: "dt-center editor-delete",
-						defaultContent: '<button type="button" class="editor-action-button editor-delete-button" aria-label="Delete item"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>',
-						orderable: false
-					}
-				],
-				"scrollY": "65vh",
-				"scrollCollapse": true,
-				"paging": false,
-				"info": false,
-				"buttons": true,
-				language: { 
-					search: "",
-					searchPlaceholder: '🔍︎    Search inventory',
-					"emptyTable":     "Please select 'LOAD DATA' to load an existing database file or 'NEW DATA' to create a new one."
-				},
-				"dom": '<"pull-left"f><"pull-right"B>tip',
-				buttons: [
-					{
-						text: 'ADD NEW ITEM',
-						action: function ( e, dt, node, config ) {
-							$('#addModal').modal('toggle');
-						}
-					},
-					{
-						text: 'SAVE DATA',
-						action: function ( e, dt, button, config ) {
-							var data = dt.buttons.exportData();
-		 
-							$.fn.dataTable.fileSave(
-								new Blob( [ JSON.stringify( data ) ] ),
-								'DB.txt'
-							);
-						}
-					},
-					{
-						text: 'NEW DATA',
-						action: function ( e, dt, node, config ) {
-							$('#addModal').modal('toggle');
-						}
-					},
-					{
-						text: 'LOAD DATA'
-					}
-				]
-			} );
-			
-			var a = null;
-			var b = null;
-			
-			function delete_Row(a){
-				datatable.row( $(a).parents('tr') ).remove().draw();
-				if (datatable.rows().count() == 0){
-					for(var i=0; i<buttonShow.length; i++){
-						if(buttonShow[i].innerHTML == '<span>ADD NEW ITEM</span>'){
-							 buttonShow[i].hidden = true;
-						} else if (buttonShow[i].innerHTML == '<span>SAVE DATA</span>'){
-							 buttonShow[i].hidden = true;
-						} else if (buttonShow[i].innerHTML == '<span>LOAD DATA</span>'){
-							 buttonShow[i].hidden = false;
-						} else if (buttonShow[i].innerHTML == '<span>NEW DATA</span>'){
-							 buttonShow[i].hidden = false;
-						}
-					}
-					$('#empty_animation').attr("hidden",false);
-				}
-			};
-			
-			$('#myTable').on('click', 'td.editor-delete', function () {
-				a = this;
-				$('#deleteModal').modal('toggle');
-				$('#delete_button').off('click').on('click', function () {
-					delete_Row(a);
-				} );
-			} );
-			
-			$('#myTable').on('click', 'td.editor-edit', function () {
-				b = this;
-				$('#edit_itemname').val(datatable.row(b).data()[0]);
-				$('#edit_quantity').val(datatable.row(b).data()[1]);
-				$('#edit_type').val(datatable.row(b).data()[2]);
-				$('#edit_unit_price').val(datatable.row(b).data()[3]);
-				$('#edit_total_price').val(datatable.row(b).data()[4]);
-				$('#editModal').modal('toggle');
-			} );
-			
-			$('#edit_data').on('submit', function (event) {
-				event.preventDefault();
-				var final_quantity = parseFloat($('#edit_quantity').val().replace(/[^0-9.]/g,''));
-				$('#edit_quantity').val(final_quantity.toFixed(0));
-				var final_unit = parseFloat($('#edit_unit_price').val().replace(/[^0-9.]/g,''));
-				$('#edit_unit_price').val('RM '+final_unit.toFixed(2));
-				var newData = [$('#edit_itemname').val(),$('#edit_quantity').val(),$('#edit_type').val(),$('#edit_unit_price').val(),$('#edit_total_price').val()];
-				datatable.row(b).data(newData).draw();
-				$('#editModal').modal('toggle');
-				$('#updateConfirmationModal').modal('toggle');
-			} );
+<script type="text/javascript">
+$(document).ready(function () {
+    const STORAGE_KEY = "DATATABLE_INVENTORY_DATA";
+    const Storage = {
+        save: (data) => localStorage.setItem(STORAGE_KEY, JSON.stringify(data)),
+        load: () => {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : [];
+        },
+        clear: () => localStorage.removeItem(STORAGE_KEY)
+    };
 
-			$('#add_data').on('submit', function (event) {
-				event.preventDefault();
-				var final_quantity = parseFloat($('#add_quantity').val().replace(/[^0-9.]/g,''));
-				$('#add_quantity').val(final_quantity.toFixed(0));
-				var final_unit = parseFloat($('#add_unit_price').val().replace(/[^0-9.]/g,''));
-				$('#add_unit_price').val('RM '+final_unit.toFixed(2));
-				var newData = [$('#add_itemname').val(),$('#add_quantity').val(),$('#add_type').val(),$('#add_unit_price').val(),$('#add_total_price').val()];
-				datatable.row.add(newData).draw();
-				$('#addModal').modal('toggle');
-				$('#addConfirmationModal').modal('toggle');
-				for(var i=0; i<buttonShow.length; i++){
-					if(buttonShow[i].innerHTML == '<span>ADD NEW ITEM</span>'){
-						 buttonShow[i].hidden = false;
-					} else if (buttonShow[i].innerHTML == '<span>SAVE DATA</span>'){
-						 buttonShow[i].hidden = false;
-					} else if (buttonShow[i].innerHTML == '<span>LOAD DATA</span>'){
-						 buttonShow[i].hidden = true;
-					} else if (buttonShow[i].innerHTML == '<span>NEW DATA</span>'){
-						 buttonShow[i].hidden = true;
-					}
-				}
-				$('#empty_animation').attr("hidden",true);
-				$('#add_itemname').val('');
-				$('#add_quantity').val('');
-				$('#add_type').val('');
-				$('#add_unit_price').val('');
-				$('#add_total_price').val('');
-			} );
-			
-			$('#edit_quantity').bind('keyup', function(){
-				var quantity_no = $(this).val().replace(/[^0-9.]/g,'');
-				$(this).val(quantity_no);
-				if(quantity_no.replace(/[^0-9.]/g,'') != ''){
-					var unit = $('#edit_unit_price').val().replace(/[^0-9.]/g,'');					
-					var total = unit * quantity_no;
-					$('#edit_total_price').val('RM '+total.toFixed(2));
-				}
-			});
-			
-			$('#edit_unit_price').bind('keyup', function(){
-				var sanitized = $(this).val().replace(/[^0-9.]/g,'');
-				$(this).val('RM '+sanitized);
-				var quantity_no = $('#edit_quantity').val();
-				if(quantity_no.replace(/[^0-9.]/g,'') == ''){
-					$('#edit_quantity').val(0);
-					quantity_no = 0;
-				}
-				var total = sanitized * quantity_no;
-				$('#edit_total_price').val('RM '+total.toFixed(2));
-			});
-			
-			$('#add_quantity').bind('keyup', function(){
-				var quantity_no = $(this).val().replace(/[^0-9.]/g,'');
-				$(this).val(quantity_no);
-				if(quantity_no.replace(/[^0-9.]/g,'') != ''){
-					var unit = $('#add_unit_price').val().replace(/[^0-9.]/g,'');					
-					var total = unit * quantity_no;
-					$('#add_total_price').val('RM '+total.toFixed(2));
-				}
-			});
-			
-			$('#add_unit_price').bind('keyup', function(){
-				var sanitized = $(this).val().replace(/[^0-9.]/g,'');
-				$(this).val('RM '+sanitized);
-				var quantity_no = $('#add_quantity').val();
-				if(quantity_no.replace(/[^0-9.]/g,'') == ''){
-					$('#add_quantity').val(0);
-					quantity_no = 0;
-				}
-				var total = sanitized * quantity_no;
-				$('#add_total_price').val('RM '+total.toFixed(2));
-			});
-			
-			var buttonShow = document.getElementsByTagName('button');
-			for(var i=0; i<buttonShow.length; i++){
-				if(buttonShow[i].innerHTML == '<span>ADD NEW ITEM</span>'){
-					 buttonShow[i].classList.add("add_button");
-					 buttonShow[i].hidden = true;
-				} else if (buttonShow[i].innerHTML == '<span>SAVE DATA</span>'){
-					 buttonShow[i].classList.add("data_button");
-					 buttonShow[i].hidden = true;
-				} else if (buttonShow[i].innerHTML == '<span>LOAD DATA</span>'){
-					 buttonShow[i].classList.add("data_button");
-					 buttonShow[i].setAttribute("onclick", "document.getElementById('upload_data').click();");
-				} else if (buttonShow[i].innerHTML == '<span>NEW DATA</span>'){
-					 buttonShow[i].classList.add("add_button");
-				}
-			}
-			
-			function readSingleFile(e) {
-			  var file = e.target.files[0];
-			  if (!file) {
-				return;
-			  }
-			  var reader = new FileReader();
-			  reader.onload = function(e) {
-				var contents = e.target.result;
-				displayContents(contents);
-			  };
-			  reader.readAsText(file);
-			}
+    let dataSrc = Storage.load();
 
-			function displayContents(contents) {
-			  dataSrc = JSON.parse(contents.split('"body":')[1].split('}')[0]);
-			  $('#myTable').dataTable().fnClearTable();
-			  $('#myTable').dataTable().fnAddData(dataSrc);
-			  for(var i=0; i<buttonShow.length; i++){
-				if(buttonShow[i].innerHTML == '<span>ADD NEW ITEM</span>'){
-					 buttonShow[i].hidden = false;
-				} else if (buttonShow[i].innerHTML == '<span>SAVE DATA</span>'){
-					 buttonShow[i].hidden = false;
-				} else if (buttonShow[i].innerHTML == '<span>LOAD DATA</span>'){
-					 buttonShow[i].hidden = true;
-				} else if (buttonShow[i].innerHTML == '<span>NEW DATA</span>'){
-					 buttonShow[i].hidden = true;
-				}
-			  }
-			  $('#empty_animation').attr("hidden",true);
-			  document.getElementById('upload_data').value = "";
-			}
+    const datatable = $('#myTable').DataTable({
+        data: dataSrc,
+        columns: [
+            null, null, null, null, null,
+            {
+                data: null,
+                className: "dt-center editor-edit",
+                defaultContent: '<button type="button" class="editor-action-button editor-edit-button" aria-label="Edit item"><i class="fas fa-pencil-alt" aria-hidden="true"></i></button>',
+                orderable: false
+            },
+            {
+                data: null,
+                className: "dt-center editor-delete",
+                defaultContent: '<button type="button" class="editor-action-button editor-delete-button" aria-label="Delete item"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>',
+                orderable: false
+            }
+        ],
+        scrollY: "65vh",
+        scrollCollapse: true,
+        paging: false,
+        info: false,
+        buttons: true,
+        language: {
+            search: "",
+            searchPlaceholder: "Search inventory",
+            emptyTable: "Please select 'LOAD DATA' to load an existing database file or 'NEW DATA' to create a new one."
+        },
+        dom: '<"pull-left"f><"pull-right"B>tip',
+        buttons: [
+            {
+                text: 'ADD NEW ITEM',
+                action: function (e, dt) {
+                    $('#addModal').modal('toggle');
+                }
+            },
+            {
+                text: 'SAVE DATA',
+                action: function (e, dt) {
+                    const data = dt.buttons.exportData();
+                    $.fn.dataTable.fileSave(
+                        new Blob([JSON.stringify(data)]),
+                        'DB.txt'
+                    );
+                    Storage.save(dt.data().toArray());
+                }
+            },
+            {
+                text: 'NEW DATA',
+                action: function (e, dt) {
+                    $('#addModal').modal('toggle');
+                    Storage.clear();
+                    dt.clear().draw();
+                }
+            },
+            {
+                text: 'LOAD DATA'
+            }
+        ]
+    });
 
-			document.getElementById('upload_data')
-			  .addEventListener('change', readSingleFile, false);
-			  
-			function getSubstring(string, char1, char2) {
-			  return string.slice(
-				string.indexOf(char1) + 1,
-				string.lastIndexOf(char2),
-			  );
-			}
-			
-			$('.menu_button').hover(function(){
-				$(this).find(".square_bg").addClass("menu_select_hover");
-			  }, function(){
-				$(this).find(".square_bg").removeClass("menu_select_hover");
-			});
-			
-		} );
-	</script>
+    function updateInterfaceState() {
+        const rowCount = datatable.rows().count();
+        const emptyAnimation = $('#empty_animation');
+        const buttons = document.getElementsByTagName('button');
+
+        if (rowCount > 0) {
+            emptyAnimation.hide();
+            for (let i = 0; i < buttons.length; i++) {
+                if (buttons[i].innerHTML === '<span>ADD NEW ITEM</span>') buttons[i].hidden = false;
+                if (buttons[i].innerHTML === '<span>SAVE DATA</span>') buttons[i].hidden = false;
+                if (buttons[i].innerHTML === '<span>LOAD DATA</span>') buttons[i].hidden = true;
+                if (buttons[i].innerHTML === '<span>NEW DATA</span>') buttons[i].hidden = true;
+            }
+        } else {
+            emptyAnimation.show();
+            for (let i = 0; i < buttons.length; i++) {
+                if (buttons[i].innerHTML === '<span>ADD NEW ITEM</span>') buttons[i].hidden = true;
+                if (buttons[i].innerHTML === '<span>SAVE DATA</span>') buttons[i].hidden = true;
+                if (buttons[i].innerHTML === '<span>LOAD DATA</span>') buttons[i].hidden = false;
+                if (buttons[i].innerHTML === '<span>NEW DATA</span>') buttons[i].hidden = false;
+            }
+        }
+
+        Storage.save(datatable.data().toArray());
+    }
+
+    let selectedDeleteElement = null;
+    let selectedEditElement = null;
+
+    $('#myTable').on('click', 'td.editor-delete', function () {
+        selectedDeleteElement = this;
+        $('#deleteModal').modal('toggle');
+        $('#delete_button').off('click').on('click', function () {
+            datatable.row($(selectedDeleteElement).parents('tr')).remove().draw();
+            updateInterfaceState();
+        });
+    });
+
+    $('#myTable').on('click', 'td.editor-edit', function () {
+        selectedEditElement = this;
+        const rowData = datatable.row(selectedEditElement).data();
+        $('#edit_itemname').val(rowData[0]);
+        $('#edit_quantity').val(rowData[1]);
+        $('#edit_type').val(rowData[2]);
+        $('#edit_unit_price').val(rowData[3]);
+        $('#edit_total_price').val(rowData[4]);
+        $('#editModal').modal('toggle');
+    });
+
+    $('#edit_data').on('submit', function (event) {
+        event.preventDefault();
+        const quantity = parseFloat($('#edit_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
+        const unitPrice = parseFloat($('#edit_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);
+        const updatedRow = [
+            $('#edit_itemname').val(),
+            quantity,
+            $('#edit_type').val(),
+            'RM ' + unitPrice,
+            $('#edit_total_price').val()
+        ];
+        datatable.row(selectedEditElement).data(updatedRow).draw();
+        updateInterfaceState();
+        $('#editModal').modal('toggle');
+        $('#updateConfirmationModal').modal('toggle');
+    });
+
+    $('#add_data').on('submit', function (event) {
+        event.preventDefault();
+        const quantity = parseFloat($('#add_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
+        const unitPrice = parseFloat($('#add_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);
+        const newRow = [
+            $('#add_itemname').val(),
+            quantity,
+            $('#add_type').val(),
+            'RM ' + unitPrice,
+            $('#add_total_price').val()
+        ];
+        datatable.row.add(newRow).draw();
+        updateInterfaceState();
+        $('#addModal').modal('toggle');
+        $('#addConfirmationModal').modal('toggle');
+        $('#add_itemname, #add_quantity, #add_type, #add_unit_price, #add_total_price').val('');
+    });
+
+    $('#edit_quantity').on('keyup', function () {
+        const qty = $(this).val().replace(/[^0-9.]/g, '');
+        $(this).val(qty);
+        if (qty) {
+            const unit = $('#edit_unit_price').val().replace(/[^0-9.]/g, '');
+            $('#edit_total_price').val('RM ' + (unit * qty).toFixed(2));
+        }
+    });
+
+    $('#edit_unit_price').on('keyup', function () {
+        const value = $(this).val().replace(/[^0-9.]/g, '');
+        $(this).val('RM ' + value);
+        const qty = $('#edit_quantity').val() || 0;
+        $('#edit_total_price').val('RM ' + (value * qty).toFixed(2));
+    });
+
+    $('#add_quantity').on('keyup', function () {
+        const qty = $(this).val().replace(/[^0-9.]/g, '');
+        $(this).val(qty);
+        if (qty) {
+            const unit = $('#add_unit_price').val().replace(/[^0-9.]/g, '');
+            $('#add_total_price').val('RM ' + (unit * qty).toFixed(2));
+        }
+    });
+
+    $('#add_unit_price').on('keyup', function () {
+        const value = $(this).val().replace(/[^0-9.]/g, '');
+        $(this).val('RM ' + value);
+        const qty = $('#add_quantity').val() || 0;
+        $('#add_total_price').val('RM ' + (value * qty).toFixed(2));
+    });
+
+    const buttonElements = document.getElementsByTagName('button');
+    for (let i = 0; i < buttonElements.length; i++) {
+        if (buttonElements[i].innerHTML === '<span>ADD NEW ITEM</span>') {
+            buttonElements[i].classList.add('add_button');
+        } else if (buttonElements[i].innerHTML === '<span>SAVE DATA</span>') {
+            buttonElements[i].classList.add('data_button');
+        } else if (buttonElements[i].innerHTML === '<span>LOAD DATA</span>') {
+            buttonElements[i].classList.add('data_button');
+            buttonElements[i].setAttribute('onclick', 'document.getElementById(\'upload_data\').click();');
+        } else if (buttonElements[i].innerHTML === '<span>NEW DATA</span>') {
+            buttonElements[i].classList.add('add_button');
+        }
+    }
+
+    function readSingleFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const contents = e.target.result;
+            const importedData = JSON.parse(contents.split('"body":')[1].split('}')[0]);
+            $('#myTable').dataTable().fnClearTable();
+            $('#myTable').dataTable().fnAddData(importedData);
+            updateInterfaceState();
+            document.getElementById('upload_data').value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    document.getElementById('upload_data').addEventListener('change', readSingleFile, false);
+
+    $('.menu_button').hover(function () {
+        $(this).find('.square_bg').addClass('menu_select_hover');
+    }, function () {
+        $(this).find('.square_bg').removeClass('menu_select_hover');
+    });
+
+    $(window).on('beforeunload', function () {
+        Storage.save(datatable.data().toArray());
+    });
+
+    updateInterfaceState();
+});
+</script>
 </head>
 
 <body id="page-top" style="background-color: #e50012;">
@@ -316,7 +280,7 @@
 						</div>
 					  </div>
 					</div>
-					
+
 					<!-- Modal For Update Confirmation -->
 					<div class="modal fade" id="updateConfirmationModal" tabindex="-1" aria-labelledby="updateConfirmationModalLabel" aria-hidden="true">
 					  <div class="modal-dialog modal-dialog-centered">
@@ -334,7 +298,7 @@
 						</div>
 					  </div>
 					</div>
-					
+
 					<!-- Modal For Add Confirmation -->
 					<div class="modal fade" id="addConfirmationModal" tabindex="-1" aria-labelledby="addConfirmationModalLabel" aria-hidden="true">
 					  <div class="modal-dialog modal-dialog-centered">
@@ -352,7 +316,7 @@
 						</div>
 					  </div>
 					</div>
-					
+
 					<!-- Modal For Editing -->
 					<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
 					  <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -391,7 +355,7 @@
 						</div>
 					  </div>
 					</div>
-					
+
 					<!-- Modal For Adding -->
 					<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
 					  <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -430,7 +394,7 @@
 						</div>
 					  </div>
 					</div>
-					
+
 					<div class="row">
 						<nav class="col-1 p-0" aria-label="Main navigation">
 							<div class="row" style="margin-top: 68px">
