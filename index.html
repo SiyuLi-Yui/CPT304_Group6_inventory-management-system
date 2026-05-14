@@ -126,10 +126,17 @@ $(document).ready(function () {
         setTimeout(unlockInterface, 350);
     }
 
+    $.fn.dataTable.ext.type.order['rm-currency-pre'] = function (data) {
+        return parseFloat(data.replace(/[^0-9.]/g, '')) || 0;
+    };
     const datatable = $('#myTable').DataTable({
         data: dataSrc,
         columns: [
-            null, null, null, null, null,
+            null,                   // Item Name
+            null,                   // Quantity
+            null,                   // Type
+            { type: 'rm-currency' },// Unit Price
+            { type: 'rm-currency' },// Total Price
             {
                 data: null,
                 className: "dt-center editor-edit",
@@ -143,6 +150,14 @@ $(document).ready(function () {
                 orderable: false
             }
         ],
+
+        order: [[0, 'asc']], 
+        columnDefs: [
+            { targets: 1, orderData: [1, 0] },
+            { targets: 3, orderData: [3, 0] },
+            { targets: 4, orderData: [4, 0] }
+        ],
+
         scrollY: "65vh",
         scrollCollapse: true,
         paging: false,
@@ -287,6 +302,22 @@ $(document).ready(function () {
     $('#edit_data').on('submit', function (event) {
         event.preventDefault();
         const button = $('#update_button').get(0);
+
+        const editedName = $('#edit_itemname').val().trim().toLowerCase();
+        const currentRowData = datatable.row(selectedEditElement).data();
+        const originalName = currentRowData[0].trim().toLowerCase();
+
+        if (editedName !== originalName) {
+            const exists = datatable.data().toArray().some(row =>
+                row[0].trim().toLowerCase() === editedName
+            );
+
+            if (exists) {
+                alert('Error: Item name already exists! Please use a different name.');
+                return;
+            }
+        }
+
         runWithLock(button, 'Updating item, please wait...', function () {
             const quantity = parseFloat($('#edit_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
             const unitPrice = parseFloat($('#edit_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);
@@ -307,6 +338,17 @@ $(document).ready(function () {
     $('#add_data').on('submit', function (event) {
         event.preventDefault();
         const button = $('#add_button').get(0);
+
+        const newName = $('#add_itemname').val().trim().toLowerCase();
+        const exists = datatable.data().toArray().some(row =>
+            row[0].trim().toLowerCase() === newName
+        );
+
+        if (exists) {
+            alert('Error: Item name already exists! Please use a different name.');
+            return;
+        }
+
         runWithLock(button, 'Adding item, please wait...', function () {
             const quantity = parseFloat($('#add_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
             const unitPrice = parseFloat($('#add_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);

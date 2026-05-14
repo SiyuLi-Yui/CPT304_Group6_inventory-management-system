@@ -152,3 +152,29 @@
  .form-control {
 	 min-height: 44px;
  }
+.editor-action-button {
+	min-width: 44px;
+	min-height: 44px;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+}
+
+table.dataTable thead th.sorting,
+table.dataTable thead th.sorting_asc,
+table.dataTable thead th.sorting_desc {
+    padding-right: 10px !important;   
+    padding-left: 26px !important;    
+    position: relative;
+}
+
+table.dataTable thead th:before,
+table.dataTable thead th:after {
+    right: auto !important;           
+    left: 10px !important;             
+}
+
+/* 确保表头文字左对齐，不被箭头遮挡 */
+table.dataTable thead th {
+    text-align: left !important;
+}
