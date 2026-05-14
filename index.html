@@ -21,16 +21,40 @@
 	<link rel="stylesheet" href="assets/bootstrap/css/inventory.css">
 	<script src="assets/js/jquery.min.js"></script>
 	<script src="assets/js/datatables.min.js"></script>
-<script type="text/javascript">
-$(document).ready(function () {
+	<script src="https://cdn.jsdelivr.net/npm/i18next@26/i18next.min.js"></script>
+<script type="module">
+import { getCurrentLanguage, initI18n, setLanguage, t } from './src/i18n.js';
+
+$(document).ready(async function () {
+    await initI18n();
+
     const STORAGE_KEY = "DATATABLE_INVENTORY_DATA";
+    const CONSENT_KEY = "app.cookieConsent";
+
+    // Inventory data should survive refresh but not survive leaving the page.
+    // sessionStorage is tab-scoped, while localStorage survives across sessions.
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+
+    function hasConsent() {
+        try { return localStorage.getItem(CONSENT_KEY) === 'accepted'; } catch { return false; }
+    }
+
     const Storage = {
-        save: (data) => localStorage.setItem(STORAGE_KEY, JSON.stringify(data)),
-        load: () => {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            return saved ? JSON.parse(saved) : [];
+        save: (data) => {
+            if (!hasConsent()) return;
+            try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
         },
-        clear: () => localStorage.removeItem(STORAGE_KEY)
+        load: () => {
+            if (!hasConsent()) return [];
+            try {
+                const saved = sessionStorage.getItem(STORAGE_KEY);
+                return saved ? JSON.parse(saved) : [];
+            } catch { return []; }
+        },
+        clear: () => {
+            try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+            try { localStorage.removeItem(STORAGE_KEY); } catch {}
+        }
     };
 
     let dataSrc = Storage.load();
@@ -41,10 +65,18 @@ $(document).ready(function () {
     let lastLoadButton = null;
     let lastSortTime = 0;
     const buttonContent = new WeakMap();
-    const loadingHtml = '<span class="button-loading-spinner" aria-hidden="true"></span><span>Loading...</span>';
+    const TOOLBAR_SELECTORS = {
+        addNewItem: 'button.inventory-action-add',
+        saveData: 'button.inventory-action-save',
+        newData: 'button.inventory-action-new',
+        loadData: 'button.inventory-action-load'
+    };
+    let datatable = null;
+
+    const getLoadingHtml = () => '<span class="button-loading-spinner" aria-hidden="true"></span><span>' + t('loading.spinner') + '</span>';
 
     $('head').append('<style>.button-loading-spinner{display:inline-block;width:0.9em;height:0.9em;margin-right:0.45em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-0.15em;animation:button-loading-spin 0.8s linear infinite}@keyframes button-loading-spin{to{transform:rotate(360deg)}}#global_loading_panel{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:2000;background:rgba(0,0,0,0.86);color:#fff;padding:10px 18px;border-radius:22px;font-family:Nunito,Arial,sans-serif;font-size:14px;box-shadow:0 3px 12px rgba(0,0,0,0.25);display:none}</style>');
-    $('body').append('<div id="global_loading_panel" role="status" aria-live="polite">Please wait...</div>');
+    $('body').append('<div id="global_loading_panel" role="status" aria-live="polite"></div>');
 
     function getButton(control) {
         if (!control) return null;
@@ -54,19 +86,12 @@ $(document).ready(function () {
         return found || null;
     }
 
-    function getButtonByText(text) {
-        let target = null;
-        $('button').each(function () {
-            if ($.trim($(this).text()) === text) {
-                target = this;
-                return false;
-            }
-        });
-        return target;
+    function getButtonBySelector(selector) {
+        return document.querySelector(selector);
     }
 
     function setLoadingMessage(message) {
-        $('#global_loading_panel').text(message || 'Please wait...').fadeIn(100);
+        $('#global_loading_panel').text(message || t('loading.default')).fadeIn(100);
     }
 
     function hideLoadingMessage() {
@@ -86,7 +111,7 @@ $(document).ready(function () {
                 buttonContent.set(activeButton, activeButton.innerHTML);
             }
             activeButton.setAttribute('aria-busy', 'true');
-            activeButton.innerHTML = loadingHtml;
+            activeButton.innerHTML = getLoadingHtml();
         }
         setLoadingMessage(message);
         return true;
@@ -114,7 +139,7 @@ $(document).ready(function () {
         try {
             action();
         } catch (error) {
-            alert('The action could not be completed. Please try again.');
+            alert(t('error.actionFailed'));
             console.error(error);
         } finally {
             const remaining = Math.max(0, minimumDelay - (Date.now() - startedAt));
@@ -129,7 +154,82 @@ $(document).ready(function () {
     $.fn.dataTable.ext.type.order['rm-currency-pre'] = function (data) {
         return parseFloat(data.replace(/[^0-9.]/g, '')) || 0;
     };
-    const datatable = $('#myTable').DataTable({
+
+    function getRowActionButtonHtml(actionType) {
+        if (actionType === 'edit') {
+            return '<button type="button" class="editor-action-button editor-edit-button" aria-label="' + t('tableAction.editItem') + '"><i class="fas fa-pencil-alt" aria-hidden="true"></i></button>';
+        }
+
+        return '<button type="button" class="editor-action-button editor-delete-button" aria-label="' + t('tableAction.deleteItem') + '"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>';
+    }
+
+    async function applyTranslations() {
+        const currentLanguage = await getCurrentLanguage();
+
+        document.documentElement.lang = currentLanguage === 'zh' ? 'zh-CN' : 'en';
+        document.title = t('page.title');
+
+        $('[data-i18n]').each(function () {
+            $(this).text(t(this.dataset.i18n));
+        });
+
+        $('[data-i18n-placeholder]').each(function () {
+            this.setAttribute('placeholder', t(this.dataset.i18nPlaceholder));
+        });
+
+        $('[data-i18n-aria-label]').each(function () {
+            this.setAttribute('aria-label', t(this.dataset.i18nAriaLabel));
+        });
+
+        $('[data-i18n-alt]').each(function () {
+            this.setAttribute('alt', t(this.dataset.i18nAlt));
+        });
+
+        $('.inventory-language-button').each(function () {
+            const isActive = this.dataset.lang === currentLanguage;
+            this.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            this.style.backgroundColor = isActive ? '#e50012' : '#ffffff';
+            this.style.color = isActive ? '#ffffff' : '#e50012';
+            this.style.borderColor = '#e50012';
+        });
+
+        if (!datatable) {
+            $('#global_loading_panel').text(t('loading.default'));
+            return;
+        }
+
+        datatable.button(0).text(t('toolbar.addNewItem'));
+        datatable.button(1).text(t('toolbar.saveData'));
+        datatable.button(2).text(t('toolbar.newData'));
+        datatable.button(3).text(t('toolbar.loadData'));
+
+        $('.dataTables_filter input[type="search"]').attr('placeholder', t('table.searchPlaceholder'));
+        $('#myTable td.dataTables_empty').text(t('table.emptyTable'));
+        $('#myTable .editor-edit-button').attr('aria-label', t('tableAction.editItem'));
+        $('#myTable .editor-delete-button').attr('aria-label', t('tableAction.deleteItem'));
+        $('#global_loading_panel').text(t('loading.default'));
+
+        const cookieBanner = document.getElementById('cookie-banner');
+        if (cookieBanner && cookieBanner.style.display !== 'none') {
+            cookieBanner.querySelectorAll('[data-i18n]').forEach(function (el) {
+                el.textContent = t(el.dataset.i18n);
+            });
+        }
+    }
+
+    function updateToolbarVisibility(rowCount) {
+        const hasRows = rowCount > 0;
+        $(TOOLBAR_SELECTORS.addNewItem).prop('hidden', !hasRows);
+        $(TOOLBAR_SELECTORS.saveData).prop('hidden', !hasRows);
+        $(TOOLBAR_SELECTORS.loadData).prop('hidden', hasRows);
+        $(TOOLBAR_SELECTORS.newData).prop('hidden', hasRows);
+    }
+
+    window.showDesignAlert = function () {
+        alert(t('misc.designAlert'));
+    };
+
+    datatable = $('#myTable').DataTable({
         data: dataSrc,
         columns: [
             null,                   // Item Name
@@ -140,13 +240,17 @@ $(document).ready(function () {
             {
                 data: null,
                 className: "dt-center editor-edit",
-                defaultContent: '<button type="button" class="editor-action-button editor-edit-button" aria-label="Edit item"><i class="fas fa-pencil-alt" aria-hidden="true"></i></button>',
+                render: function () {
+                    return getRowActionButtonHtml('edit');
+                },
                 orderable: false
             },
             {
                 data: null,
                 className: "dt-center editor-delete",
-                defaultContent: '<button type="button" class="editor-action-button editor-delete-button" aria-label="Delete item"><i class="fas fa-trash-alt" aria-hidden="true"></i></button>',
+                render: function () {
+                    return getRowActionButtonHtml('delete');
+                },
                 orderable: false
             }
         ],
@@ -165,23 +269,25 @@ $(document).ready(function () {
         buttons: true,
         language: {
             search: "",
-            searchPlaceholder: "Search inventory",
-            emptyTable: "Please select 'LOAD DATA' to load an existing database file or 'NEW DATA' to create a new one."
+            searchPlaceholder: t('table.searchPlaceholder'),
+            emptyTable: t('table.emptyTable')
         },
         dom: '<"pull-left"f><"pull-right"B>tip',
         buttons: [
             {
-                text: 'ADD NEW ITEM',
+                text: t('toolbar.addNewItem'),
+                className: 'add_button inventory-action-add',
                 action: function (e, dt, node) {
-                    runWithLock(node, 'Opening form, please wait...', function () {
+                    runWithLock(node, t('loading.openingForm'), function () {
                         $('#addModal').modal('toggle');
                     }, 300);
                 }
             },
             {
-                text: 'SAVE DATA',
+                text: t('toolbar.saveData'),
+                className: 'data_button inventory-action-save',
                 action: function (e, dt, node) {
-                    runWithLock(node, 'Saving data, please wait...', function () {
+                    runWithLock(node, t('loading.savingData'), function () {
                         const data = dt.buttons.exportData();
                         $.fn.dataTable.fileSave(
                             new Blob([JSON.stringify(data)]),
@@ -192,9 +298,10 @@ $(document).ready(function () {
                 }
             },
             {
-                text: 'NEW DATA',
+                text: t('toolbar.newData'),
+                className: 'add_button inventory-action-new',
                 action: function (e, dt, node) {
-                    runWithLock(node, 'Preparing new data, please wait...', function () {
+                    runWithLock(node, t('loading.preparingNew'), function () {
                         Storage.clear();
                         dt.clear().draw();
                         $('#addModal').modal('toggle');
@@ -202,7 +309,8 @@ $(document).ready(function () {
                 }
             },
             {
-                text: 'LOAD DATA',
+                text: t('toolbar.loadData'),
+                className: 'data_button inventory-action-load',
                 action: function (e, dt, node) {
                     if (actionLocked) return;
                     lastLoadButton = getButton(node);
@@ -218,23 +326,12 @@ $(document).ready(function () {
 
         if (rowCount > 0) {
             emptyAnimation.hide();
-            $('button').each(function () {
-                const label = $.trim($(this).text());
-                if (label === 'ADD NEW ITEM') this.hidden = false;
-                if (label === 'SAVE DATA') this.hidden = false;
-                if (label === 'LOAD DATA') this.hidden = true;
-                if (label === 'NEW DATA') this.hidden = true;
-            });
         } else {
             emptyAnimation.show();
-            $('button').each(function () {
-                const label = $.trim($(this).text());
-                if (label === 'ADD NEW ITEM') this.hidden = true;
-                if (label === 'SAVE DATA') this.hidden = true;
-                if (label === 'LOAD DATA') this.hidden = false;
-                if (label === 'NEW DATA') this.hidden = false;
-            });
         }
+
+        updateToolbarVisibility(rowCount);
+        $('#myTable td.dataTables_empty').text(t('table.emptyTable'));
 
         Storage.save(datatable.data().toArray());
     }
@@ -269,7 +366,7 @@ $(document).ready(function () {
     $('#myTable').on('click', 'button.editor-delete-button', function () {
         const button = this;
         const row = $(this).closest('tr').get(0);
-        runWithLock(button, 'Opening delete confirmation, please wait...', function () {
+        runWithLock(button, t('loading.openingDelete'), function () {
             selectedDeleteElement = row;
             $('#deleteModal').modal('toggle');
         }, 300);
@@ -278,7 +375,7 @@ $(document).ready(function () {
     $('#delete_button').on('click', function () {
         const button = this;
         if (!selectedDeleteElement) return;
-        runWithLock(button, 'Deleting item, please wait...', function () {
+        runWithLock(button, t('loading.deletingItem'), function () {
             datatable.row(selectedDeleteElement).remove().draw();
             selectedDeleteElement = null;
         }, 450);
@@ -287,7 +384,7 @@ $(document).ready(function () {
     $('#myTable').on('click', 'button.editor-edit-button', function () {
         const button = this;
         const row = $(this).closest('tr').get(0);
-        runWithLock(button, 'Opening edit form, please wait...', function () {
+        runWithLock(button, t('loading.openingEdit'), function () {
             selectedEditElement = row;
             const rowData = datatable.row(row).data();
             $('#edit_itemname').val(rowData[0]);
@@ -313,12 +410,12 @@ $(document).ready(function () {
             );
 
             if (exists) {
-                alert('Error: Item name already exists! Please use a different name.');
+                alert(t('error.duplicateName'));
                 return;
             }
         }
 
-        runWithLock(button, 'Updating item, please wait...', function () {
+        runWithLock(button, t('loading.updatingItem'), function () {
             const quantity = parseFloat($('#edit_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
             const unitPrice = parseFloat($('#edit_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);
             const updatedRow = [
@@ -345,11 +442,11 @@ $(document).ready(function () {
         );
 
         if (exists) {
-            alert('Error: Item name already exists! Please use a different name.');
+            alert(t('error.duplicateName'));
             return;
         }
 
-        runWithLock(button, 'Adding item, please wait...', function () {
+        runWithLock(button, t('loading.addingItem'), function () {
             const quantity = parseFloat($('#add_quantity').val().replace(/[^0-9.]/g, '')).toFixed(0);
             const unitPrice = parseFloat($('#add_unit_price').val().replace(/[^0-9.]/g, '')).toFixed(2);
             const newRow = [
@@ -398,24 +495,10 @@ $(document).ready(function () {
         $('#add_total_price').val('RM ' + (value * qty).toFixed(2));
     });
 
-    const buttonElements = document.getElementsByTagName('button');
-    for (let i = 0; i < buttonElements.length; i++) {
-        const label = $.trim($(buttonElements[i]).text());
-        if (label === 'ADD NEW ITEM') {
-            buttonElements[i].classList.add('add_button');
-        } else if (label === 'SAVE DATA') {
-            buttonElements[i].classList.add('data_button');
-        } else if (label === 'LOAD DATA') {
-            buttonElements[i].classList.add('data_button');
-        } else if (label === 'NEW DATA') {
-            buttonElements[i].classList.add('add_button');
-        }
-    }
-
     function readSingleFile(e) {
         const file = e.target.files[0];
         if (!file) return;
-        if (!lockInterface(lastLoadButton || getButtonByText('LOAD DATA'), 'Loading data, please wait...')) return;
+        if (!lockInterface(lastLoadButton || getButtonBySelector(TOOLBAR_SELECTORS.loadData), t('loading.loadingData'))) return;
         const reader = new FileReader();
         reader.onload = function (event) {
             try {
@@ -425,7 +508,7 @@ $(document).ready(function () {
                 $('#myTable').dataTable().fnAddData(importedData);
                 updateInterfaceState();
             } catch (error) {
-                alert('The selected file could not be loaded. Please check the file and try again.');
+                alert(t('error.fileLoadFailed'));
                 console.error(error);
             } finally {
                 document.getElementById('upload_data').value = '';
@@ -434,7 +517,7 @@ $(document).ready(function () {
             }
         };
         reader.onerror = function () {
-            alert('The selected file could not be read. Please try again.');
+            alert(t('error.fileReadFailed'));
             document.getElementById('upload_data').value = '';
             lastLoadButton = null;
             finishAsyncAction();
@@ -443,6 +526,23 @@ $(document).ready(function () {
     }
 
     document.getElementById('upload_data').addEventListener('change', readSingleFile, false);
+
+    $('.menu_button[data-design-alert="true"]').on('click', function () {
+        window.showDesignAlert();
+    });
+
+    $('.inventory-language-button').on('click', async function () {
+        const nextLanguage = this.dataset.lang;
+        const currentLanguage = await getCurrentLanguage();
+        if (nextLanguage === currentLanguage) {
+            return;
+        }
+
+        await setLanguage(nextLanguage);
+        await applyTranslations();
+        datatable.draw(false);
+        updateInterfaceState();
+    });
 
     $('.menu_button').hover(function () {
         $(this).find('.square_bg').addClass('menu_select_hover');
@@ -454,7 +554,73 @@ $(document).ready(function () {
         Storage.save(datatable.data().toArray());
     });
 
+    function initCookieBanner() {
+        var currentConsent;
+        try { currentConsent = localStorage.getItem(CONSENT_KEY); } catch { currentConsent = null; }
+        var banner = document.getElementById('cookie-banner');
+        if (!banner) return;
+
+        // Only permanently hide if user has previously accepted.
+        // 'declined' must NOT be stored in localStorage (contradictory to decline storage use).
+        // Instead, session-level declined state is kept in sessionStorage.
+        if (currentConsent === 'accepted') {
+            banner.style.display = 'none';
+            return;
+        }
+
+        // Migrate stale 'declined' value that old code may have written to localStorage.
+        if (currentConsent === 'declined') {
+            try { localStorage.removeItem(CONSENT_KEY); } catch {}
+        }
+
+        // If user already declined in this browser session, don't show again until next load.
+        var sessionDeclined = false;
+        try { sessionDeclined = sessionStorage.getItem(CONSENT_KEY) === 'declined'; } catch {}
+        if (sessionDeclined) {
+            banner.style.display = 'none';
+            return;
+        }
+
+        banner.querySelectorAll('[data-i18n]').forEach(function (el) {
+            el.textContent = t(el.dataset.i18n);
+        });
+        banner.style.display = 'block';
+
+        document.getElementById('cookie-accept-btn').addEventListener('click', function () {
+            try { localStorage.setItem(CONSENT_KEY, 'accepted'); } catch {}
+            banner.style.display = 'none';
+            // Only restore previously saved data when the table is currently empty.
+            // If the user already loaded a file before accepting, keep that data intact.
+            if (datatable.rows().count() === 0) {
+                try {
+                    var saved = sessionStorage.getItem(STORAGE_KEY);
+                    if (saved) {
+                        var data = JSON.parse(saved);
+                        if (Array.isArray(data) && data.length > 0) {
+                            datatable.clear().rows.add(data).draw();
+                            updateInterfaceState();
+                        }
+                    }
+                } catch {}
+            } else {
+                // Consent just granted and table already has data; persist it now.
+                Storage.save(datatable.data().toArray());
+            }
+        });
+
+        document.getElementById('cookie-decline-btn').addEventListener('click', function () {
+            // Do NOT write to localStorage — that would contradict the user's choice.
+            // Record the decline in sessionStorage so the banner stays hidden this session.
+            try { sessionStorage.setItem(CONSENT_KEY, 'declined'); } catch {}
+            try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+            try { localStorage.removeItem(STORAGE_KEY); } catch {}
+            banner.style.display = 'none';
+        });
+    }
+
+    await applyTranslations();
     updateInterfaceState();
+    initCookieBanner();
 });
 </script>
 </head>
@@ -470,14 +636,14 @@ $(document).ready(function () {
 					  <div class="modal-dialog modal-dialog-centered">
 						<div class="modal-content">
 						  <div class="modal-header">
-							<h2 class="modal-title h5" id="deleteModalLabel" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Delete Confirmation</h2>
-							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
+                            <h2 class="modal-title h5" id="deleteModalLabel" data-i18n="modal.deleteTitle" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Delete Confirmation</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="modal.closeBtn" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
 						  </div>
-						  <div class="modal-body" style="font-size: calc(0.7vw + 0.7vh); color:rgb(0,0,0); font-family: Nunito; padding-left: 24px;">
+                          <div class="modal-body" data-i18n="modal.deleteBody" style="font-size: calc(0.7vw + 0.7vh); color:rgb(0,0,0); font-family: Nunito; padding-left: 24px;">
 							Are you sure you wish to remove this record?
 						  </div>
 						  <div class="modal-footer">
-							<button type="button" class="modal_button" data-bs-dismiss="modal" id="delete_button">Delete</button>
+                            <button type="button" class="modal_button" data-bs-dismiss="modal" id="delete_button" data-i18n="modal.deleteBtn">Delete</button>
 						  </div>
 						</div>
 					  </div>
@@ -488,14 +654,14 @@ $(document).ready(function () {
 					  <div class="modal-dialog modal-dialog-centered">
 						<div class="modal-content">
 						  <div class="modal-header">
-							<h2 class="modal-title h5" id="updateConfirmationModalLabel" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Update Confirmation</h2>
-							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
+                            <h2 class="modal-title h5" id="updateConfirmationModalLabel" data-i18n="modal.updateConfirmTitle" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Update Confirmation</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="modal.closeBtn" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
 						  </div>
-						  <div class="modal-body" style="font-size: calc(0.7vw + 0.7vh); color:rgb(0,0,0); font-family: Nunito; padding-left: 24px;">
+                          <div class="modal-body" data-i18n="modal.updateConfirmBody" style="font-size: calc(0.7vw + 0.7vh); color:rgb(0,0,0); font-family: Nunito; padding-left: 24px;">
 							Inventory has been successfully updated.
 						  </div>
 						  <div class="modal-footer">
-							<button type="button" class="modal_button" data-bs-dismiss="modal">OK</button>
+                            <button type="button" class="modal_button" data-bs-dismiss="modal" data-i18n="modal.okBtn">OK</button>
 						  </div>
 						</div>
 					  </div>
@@ -506,14 +672,14 @@ $(document).ready(function () {
 					  <div class="modal-dialog modal-dialog-centered">
 						<div class="modal-content">
 						  <div class="modal-header">
-							<h2 class="modal-title h5" id="addConfirmationModalLabel" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Add Confirmation</h2>
-							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
+                            <h2 class="modal-title h5" id="addConfirmationModalLabel" data-i18n="modal.addConfirmTitle" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Add Confirmation</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="modal.closeBtn" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
 						  </div>
-						  <div class="modal-body" style="font-size: calc(0.7vw + 0.7vh); color:rgb(0,0,0); font-family: Nunito; padding-left: 24px;">
+                          <div class="modal-body" data-i18n="modal.addConfirmBody" style="font-size: calc(0.7vw + 0.7vh); color:rgb(0,0,0); font-family: Nunito; padding-left: 24px;">
 							A new item has been successfully added.
 						  </div>
 						  <div class="modal-footer">
-							<button type="button" class="modal_button" data-bs-dismiss="modal">OK</button>
+                            <button type="button" class="modal_button" data-bs-dismiss="modal" data-i18n="modal.okBtn">OK</button>
 						  </div>
 						</div>
 					  </div>
@@ -524,35 +690,35 @@ $(document).ready(function () {
 					  <div class="modal-dialog modal-dialog-centered modal-lg">
 						<div class="modal-content">
 						  <div class="modal-header">
-							<h2 class="modal-title h5" id="editModalLabel" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Edit Data</h2>
-							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
+                            <h2 class="modal-title h5" id="editModalLabel" data-i18n="modal.editTitle" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Edit Data</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="modal.closeBtn" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
 						  </div>
 						  <div class="modal-body" style="font-size: calc(0.6vw + 0.6vh); color:rgb(0,0,0); font-family: Nunito; padding-left: 24px;">
 							<form id="edit_data" class="needs-validation">
 								<div class="form-group mb-3">
-									<label for="edit_itemname" class="mb-1">Item Name</label>
-									<input type="text" class="form-control" id="edit_itemname" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="edit_itemname" class="mb-1" data-i18n="form.labelItemName">Item Name</label>
+                                    <input type="text" class="form-control" id="edit_itemname" data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 								<div class="form-group mb-3">
-									<label for="edit_quantity" class="mb-1">Quantity</label>
-									<input type="text" class="form-control" id="edit_quantity" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="edit_quantity" class="mb-1" data-i18n="form.labelQuantity">Quantity</label>
+                                    <input type="text" class="form-control" id="edit_quantity" data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 								<div class="form-group mb-3">
-									<label for="edit_type" class="mb-1">Type</label>
-									<input type="text" class="form-control" id="edit_type" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="edit_type" class="mb-1" data-i18n="form.labelType">Type</label>
+                                    <input type="text" class="form-control" id="edit_type" data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 								<div class="form-group mb-3">
-									<label for="edit_unit_price" class="mb-1">Unit Price</label>
-									<input type="text" class="form-control" id="edit_unit_price" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="edit_unit_price" class="mb-1" data-i18n="form.labelUnitPrice">Unit Price</label>
+                                    <input type="text" class="form-control" id="edit_unit_price" data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 								<div class="form-group">
-									<label for="edit_total_price" class="mb-1">Total Price</label>
-									<input type="text" class="form-control" id="edit_total_price" readonly aria-readonly="true" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="edit_total_price" class="mb-1" data-i18n="form.labelTotalPrice">Total Price</label>
+                                    <input type="text" class="form-control" id="edit_total_price" readonly aria-readonly="true" data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 							</form>
 						  </div>
 						  <div class="modal-footer">
-							<button class="modal_button" id="update_button" type="submit" form="edit_data">Update</button>
+                            <button class="modal_button" id="update_button" type="submit" form="edit_data" data-i18n="modal.editUpdateBtn">Update</button>
 						  </div>
 						</div>
 					  </div>
@@ -563,46 +729,47 @@ $(document).ready(function () {
 					  <div class="modal-dialog modal-dialog-centered modal-lg">
 						<div class="modal-content">
 						  <div class="modal-header">
-							<h2 class="modal-title h5" id="addModalLabel" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Add New Item</h2>
-							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
+                            <h2 class="modal-title h5" id="addModalLabel" data-i18n="modal.addTitle" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; padding-top: 3px; padding-bottom: 3px; padding-left: 8px; font-weight: bold;">Add New Item</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="modal.closeBtn" aria-label="Close" style="padding-top: 3px; padding-bottom: 3px; padding-right: 20px;"></button>
 						  </div>
 						  <div class="modal-body" style="font-size: calc(0.6vw + 0.6vh); color:rgb(0,0,0); font-family: Nunito; padding-left: 24px;">
 							<form id="add_data" class="needs-validation">
 								<div class="form-group mb-3">
-									<label for="add_itemname" class="mb-1">Item Name</label>
-									<input type="text" class="form-control" id="add_itemname" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="add_itemname" class="mb-1" data-i18n="form.labelItemName">Item Name</label>
+                                    <input type="text" class="form-control" id="add_itemname" data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 								<div class="form-group mb-3">
-									<label for="add_quantity" class="mb-1">Quantity</label>
-									<input type="text" class="form-control" id="add_quantity" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="add_quantity" class="mb-1" data-i18n="form.labelQuantity">Quantity</label>
+                                    <input type="text" class="form-control" id="add_quantity" data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 								<div class="form-group mb-3">
-									<label for="add_type" class="mb-1">Type</label>
-									<input type="text" class="form-control" id="add_type" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="add_type" class="mb-1" data-i18n="form.labelType">Type</label>
+                                    <input type="text" class="form-control" id="add_type" data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 								<div class="form-group mb-3">
-									<label for="add_unit_price" class="mb-1">Unit Price</label>
-									<input type="text" class="form-control" id="add_unit_price" value="RM " placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="add_unit_price" class="mb-1" data-i18n="form.labelUnitPrice">Unit Price</label>
+                                    <input type="text" class="form-control" id="add_unit_price" value="RM " data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 								<div class="form-group">
-									<label for="add_total_price" class="mb-1">Total Price</label>
-									<input type="text" class="form-control" id="add_total_price" value="RM " readonly aria-readonly="true" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
+                                    <label for="add_total_price" class="mb-1" data-i18n="form.labelTotalPrice">Total Price</label>
+                                    <input type="text" class="form-control" id="add_total_price" value="RM " readonly aria-readonly="true" data-i18n-placeholder="form.placeholder" placeholder="Please enter a value." required style="font-size: calc(0.65vw + 0.65vh); color:rgb(0,0,0); font-family: Nunito;">
 								</div>
 							</form>
 						  </div>
 						  <div class="modal-footer">
-							<button class="modal_button" id="add_button" type="submit" form="add_data">Add</button>
+                            <button class="modal_button" id="add_button" type="submit" form="add_data" data-i18n="modal.addBtn">Add</button>
 						  </div>
 						</div>
 					  </div>
 					</div>
 
 					<div class="row">
-						<nav class="col-1 p-0" aria-label="Main navigation">
+                        <nav class="col-1 p-0" data-i18n-aria-label="nav.mainNavigation" aria-label="Main navigation">
 							<div class="row" style="margin-top: 68px">
 								<button type="button"
 										class="fa-stack fa-2x menu_button"
-										aria-label="Open inventory panel"
+                                        data-i18n-aria-label="nav.openInventoryPanel"
+                                        aria-label="Open inventory panel"
 										style="margin: auto; cursor: pointer; background: transparent; border: none; padding: 0; outline: none;"
 										aria-current="page">
 									<i class="fas fa-square fa-stack-1x square_bg" style="color:rgba(0,0,0,0.2); font-size: calc(2.3vw + 2.3vh); transition: 0.3s;" aria-hidden="true"></i>
@@ -613,9 +780,10 @@ $(document).ready(function () {
 							<div class="row" style="margin-top: 10px">
 								<button type="button"
 										class="fa-stack fa-2x menu_button"
-										aria-label="Open analytics panel"
+                                        data-i18n-aria-label="nav.openAnalyticsPanel"
+                                        aria-label="Open analytics panel"
 										style="margin: auto; cursor: pointer; background: transparent; border: none; padding: 0; outline: none;"
-										onclick="alert('Hi there! I added these buttons just for design because it looked kinda empty :3');">
+                                        data-design-alert="true">
 								  <i class="fas fa-square fa-stack-1x square_bg" style="color:rgba(0,0,0,0); font-size: calc(2.3vw + 2.3vh); transition: 0.3s;" aria-hidden="true"></i>
 								  <i class="far fa-chart-bar fa-stack-1x" style="color: rgba(255,255,255,1); font-size: calc(1vw + 1vh);" aria-hidden="true"></i>
 								</button>
@@ -623,9 +791,10 @@ $(document).ready(function () {
 							<div class="row" style="margin-top: 10px">
 								<button type="button"
 										class="fa-stack fa-2x menu_button"
-										aria-label="Open calendar panel"
+                                        data-i18n-aria-label="nav.openCalendarPanel"
+                                        aria-label="Open calendar panel"
 										style="margin: auto; cursor: pointer; background: transparent; border: none; padding: 0; outline: none;"
-										onclick="alert('Hi there! I added these buttons just for design because it looked kinda empty :3');">
+                                        data-design-alert="true">
 								  <i class="fas fa-square fa-stack-1x square_bg" style="color:rgba(0,0,0,0); font-size: calc(2.3vw + 2.3vh); transition: 0.3s;" aria-hidden="true"></i>
 								  <i class="far fa-calendar-alt fa-stack-1x" style="color: rgba(255,255,255,1); font-size: calc(1vw + 1vh);" aria-hidden="true"></i>
 								</button>
@@ -633,9 +802,10 @@ $(document).ready(function () {
 							<div class="row" style="margin-top: 10px">
 								<button type="button"
 										class="fa-stack fa-2x menu_button"
-										aria-label="Open messages panel"
+                                        data-i18n-aria-label="nav.openMessagesPanel"
+                                        aria-label="Open messages panel"
 										style="margin: auto; cursor: pointer; background: transparent; border: none; padding: 0; outline: none;"
-										onclick="alert('Hi there! I added these buttons just for design because it looked kinda empty :3');">
+                                        data-design-alert="true">
 								  <i class="fas fa-square fa-stack-1x square_bg" style="color:rgba(0,0,0,0); font-size: calc(2.3vw + 2.3vh); transition: 0.3s;" aria-hidden="true"></i>
 								  <i class="far fa-comment-dots fa-stack-1x" style="color: rgba(255,255,255,1); font-size: calc(1vw + 1vh);" aria-hidden="true"></i>
 								</button>
@@ -643,9 +813,10 @@ $(document).ready(function () {
 							<div class="row" style="margin-top: 10px">
 								<button type="button"
 										class="fa-stack fa-2x menu_button"
-										aria-label="Open files panel"
+                                        data-i18n-aria-label="nav.openFilesPanel"
+                                        aria-label="Open files panel"
 										style="margin: auto; cursor: pointer; background: transparent; border: none; padding: 0; outline: none;"
-										onclick="alert('Hi there! I added these buttons just for design because it looked kinda empty :3');">
+                                        data-design-alert="true">
 								  <i class="fas fa-square fa-stack-1x square_bg" style="color:rgba(0,0,0,0); font-size: calc(2.3vw + 2.3vh); transition: 0.3s;" aria-hidden="true"></i>
 								  <i class="far fa-folder-open fa-stack-1x" style="color: rgba(255,255,255,1); font-size: calc(1vw + 1vh);" aria-hidden="true"></i>
 								</button>
@@ -656,34 +827,40 @@ $(document).ready(function () {
 								<div class="card p-0" style="background-color: white; border-radius: 15px 0px 0px 15px; border: none; box-shadow: 0 0px 6px 2px rgba(0,0,0,0.2); height:100vh;">
 									<header class="row">
 										<div class="col" style="margin-left: 2.6vw; margin-top: 25px; margin-bottom: 20px;">
-											<h1 id="inventory-heading" class="fw-bold text-xs" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; margin-bottom: 0;">Manage Inventory</h1>
+                                            <h1 id="inventory-heading" class="fw-bold text-xs" data-i18n="header.manageInventory" style="font-size: calc(0.8vw + 0.8vh); color:rgb(0,0,0); font-family: Nunito; margin-bottom: 0;">Manage Inventory</h1>
 										</div>
 										<div class="col" style="margin-right: 70px; margin-top: auto; margin-bottom: auto; text-align: right;">
-											<img src="assets/images/uniqlo_logo.png" alt="UNIQLO logo" style="height: 4.7vh;">
+                                            <div style="display: inline-flex; align-items: center; gap: 12px;">
+                                                <div class="btn-group" role="group" aria-label="Language switcher">
+                                                    <button type="button" class="btn btn-sm inventory-language-button" data-lang="en" aria-pressed="false" style="min-width: 48px; font-family: Nunito; font-size: 12px; border: 1px solid #e50012; border-radius: 999px 0 0 999px; padding: 4px 10px; line-height: 1.2;">EN</button>
+                                                    <button type="button" class="btn btn-sm inventory-language-button" data-lang="zh" aria-pressed="false" style="min-width: 48px; font-family: Nunito; font-size: 12px; border: 1px solid #e50012; border-left: none; border-radius: 0 999px 999px 0; padding: 4px 10px; line-height: 1.2;">中文</button>
+                                                </div>
+                                                <img src="assets/images/uniqlo_logo.png" data-i18n-alt="header.logoAlt" alt="UNIQLO logo" style="height: 4.7vh;">
+                                            </div>
 										</div>
 									</header>
-									<input type="file" name="data" id="upload_data" aria-label="Upload inventory data file" style="display: none;"/>
+                                    <input type="file" name="data" id="upload_data" data-i18n-aria-label="upload.ariaLabel" aria-label="Upload inventory data file" style="display: none;"/>
 									<div style="border-bottom: 2px solid  rgba(0,0,0,0.1); width: 100%;"></div>
 									<div class="row">
 										<div class="col" style="margin-left: 2.6vw; margin-top: 20px; margin-bottom: 13px; margin-right: 55px">
 											<table id="myTable" class="row-border hover" aria-describedby="inventory-table-description" style="font-size: calc(0.6vw + 0.6vh); font-family: Nunito; color: black;">
-														<caption id="inventory-table-description" class="visually-hidden">Inventory items with edit and delete controls.</caption>
+                                                            <caption id="inventory-table-description" class="visually-hidden" data-i18n="table.caption">Inventory items with edit and delete controls.</caption>
 												<thead>
 													<tr>
-														<th scope="col">Item Name</th>
-														<th scope="col">Quantity</th>
-														<th scope="col">Type</th>
-														<th scope="col">Unit Price</th>
-														<th scope="col">Total Price</th>
-														<th scope="col">Edit</th>
-																	<th scope="col">Delete</th>
+                                                            <th scope="col" data-i18n="table.colItemName">Item Name</th>
+                                                            <th scope="col" data-i18n="table.colQuantity">Quantity</th>
+                                                            <th scope="col" data-i18n="table.colType">Type</th>
+                                                            <th scope="col" data-i18n="table.colUnitPrice">Unit Price</th>
+                                                            <th scope="col" data-i18n="table.colTotalPrice">Total Price</th>
+                                                            <th scope="col" data-i18n="table.colEdit">Edit</th>
+                                                            <th scope="col" data-i18n="table.colDelete">Delete</th>
 													</tr>
 												</thead>
 											</table>
 										</div>
 									</div>
 									<div class="row" style="margin: auto;" id="empty_animation" role="status" aria-live="polite">
-										<img src="assets/images/empty.gif" alt="No inventory data loaded" style="height: 50vh;">
+                                        <img src="assets/images/empty.gif" data-i18n-alt="misc.emptyGifAlt" alt="No inventory data loaded" style="height: 50vh;">
 									</div>
 								</div>
 							</section>
@@ -697,6 +874,16 @@ $(document).ready(function () {
     <script src="assets/js/chart.min.js"></script>
     <script src="assets/js/bs-init.js"></script>
     <script src="assets/js/theme.js"></script>
+
+    <!-- Cookie Consent Banner -->
+    <div id="cookie-banner" role="dialog" aria-live="polite" aria-labelledby="cookie-banner-msg" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:3000;background:#fff;border-top:3px solid #e50012;box-shadow:0 -2px 14px rgba(0,0,0,0.18);padding:14px 28px;font-family:Nunito,Arial,sans-serif;">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;max-width:1400px;margin:auto;">
+        <span id="cookie-banner-msg" data-i18n="cookie.bannerText" style="flex:1;font-size:13px;color:#333;min-width:220px;"></span>
+        <a href="privacy.html" target="_blank" rel="noopener noreferrer" data-i18n="cookie.privacyLink" style="font-size:13px;color:#e50012;text-decoration:underline;white-space:nowrap;"></a>
+        <button id="cookie-decline-btn" data-i18n="cookie.decline" type="button" style="padding:6px 20px;font-family:Nunito,Arial,sans-serif;font-size:13px;font-weight:600;border:1.5px solid #e50012;border-radius:999px;background:#fff;color:#e50012;cursor:pointer;white-space:nowrap;min-height:36px;"></button>
+        <button id="cookie-accept-btn" data-i18n="cookie.accept" type="button" style="padding:6px 20px;font-family:Nunito,Arial,sans-serif;font-size:13px;font-weight:600;border:1.5px solid #e50012;border-radius:999px;background:#e50012;color:#fff;cursor:pointer;white-space:nowrap;min-height:36px;"></button>
+      </div>
+    </div>
 </body>
 
 </html>

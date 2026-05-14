@@ -1,0 +1,88 @@
+{
+  "page": {
+    "title": "UNIQLO Inventory System"
+  },
+  "header": {
+    "manageInventory": "Manage Inventory",
+    "logoAlt": "UNIQLO logo"
+  },
+  "table": {
+    "caption": "Inventory items with edit and delete controls.",
+    "colItemName": "Item Name",
+    "colQuantity": "Quantity",
+    "colType": "Type",
+    "colUnitPrice": "Unit Price",
+    "colTotalPrice": "Total Price",
+    "colEdit": "Edit",
+    "colDelete": "Delete",
+    "searchPlaceholder": "Search inventory",
+    "emptyTable": "Please select 'LOAD DATA' to load an existing database file or 'NEW DATA' to create a new one."
+  },
+  "toolbar": {
+    "addNewItem": "ADD NEW ITEM",
+    "saveData": "SAVE DATA",
+    "newData": "NEW DATA",
+    "loadData": "LOAD DATA"
+  },
+  "nav": {
+    "mainNavigation": "Main navigation",
+    "openInventoryPanel": "Open inventory panel",
+    "openAnalyticsPanel": "Open analytics panel",
+    "openCalendarPanel": "Open calendar panel",
+    "openMessagesPanel": "Open messages panel",
+    "openFilesPanel": "Open files panel"
+  },
+  "modal": {
+    "deleteTitle": "Delete Confirmation",
+    "deleteBody": "Are you sure you wish to remove this record?",
+    "deleteBtn": "Delete",
+    "updateConfirmTitle": "Update Confirmation",
+    "updateConfirmBody": "Inventory has been successfully updated.",
+    "addConfirmTitle": "Add Confirmation",
+    "addConfirmBody": "A new item has been successfully added.",
+    "editTitle": "Edit Data",
+    "editUpdateBtn": "Update",
+    "addTitle": "Add New Item",
+    "addBtn": "Add",
+    "okBtn": "OK",
+    "closeBtn": "Close"
+  },
+  "form": {
+    "labelItemName": "Item Name",
+    "labelQuantity": "Quantity",
+    "labelType": "Type",
+    "labelUnitPrice": "Unit Price",
+    "labelTotalPrice": "Total Price",
+    "placeholder": "Please enter a value."
+  },
+  "upload": {
+    "ariaLabel": "Upload inventory data file"
+  },
+  "tableAction": {
+    "editItem": "Edit item",
+    "deleteItem": "Delete item"
+  },
+  "loading": {
+    "default": "Please wait...",
+    "spinner": "Loading...",
+    "openingForm": "Opening form, please wait...",
+    "savingData": "Saving data, please wait...",
+    "preparingNew": "Preparing new data, please wait...",
+    "loadingData": "Loading data, please wait...",
+    "openingDelete": "Opening delete confirmation, please wait...",
+    "deletingItem": "Deleting item, please wait...",
+    "openingEdit": "Opening edit form, please wait...",
+    "updatingItem": "Updating item, please wait...",
+    "addingItem": "Adding item, please wait..."
+  },
+  "error": {
+    "actionFailed": "The action could not be completed. Please try again.",
+    "duplicateName": "Error: Item name already exists! Please use a different name.",
+    "fileLoadFailed": "The selected file could not be loaded. Please check the file and try again.",
+    "fileReadFailed": "The selected file could not be read. Please try again."
+  },
+  "misc": {
+    "designAlert": "Hi there! I added these buttons just for design because it looked kinda empty :3",
+    "emptyGifAlt": "No inventory data loaded"
+  }
+}

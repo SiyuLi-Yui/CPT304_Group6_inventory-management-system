@@ -1,0 +1,88 @@
+{
+  "page": {
+    "title": "优衣库库存管理系统"
+  },
+  "header": {
+    "manageInventory": "库存管理",
+    "logoAlt": "UNIQLO 标志"
+  },
+  "table": {
+    "caption": "库存列表，含编辑和删除操作。",
+    "colItemName": "商品名称",
+    "colQuantity": "数量",
+    "colType": "类型",
+    "colUnitPrice": "单价",
+    "colTotalPrice": "总价",
+    "colEdit": "编辑",
+    "colDelete": "删除",
+    "searchPlaceholder": "搜索库存",
+    "emptyTable": "请点击'加载数据'以加载现有数据库文件，或点击'新建数据'创建新数据。"
+  },
+  "toolbar": {
+    "addNewItem": "新增商品",
+    "saveData": "保存数据",
+    "newData": "新建数据",
+    "loadData": "加载数据"
+  },
+  "nav": {
+    "mainNavigation": "主导航",
+    "openInventoryPanel": "打开库存面板",
+    "openAnalyticsPanel": "打开分析面板",
+    "openCalendarPanel": "打开日历面板",
+    "openMessagesPanel": "打开消息面板",
+    "openFilesPanel": "打开文件面板"
+  },
+  "modal": {
+    "deleteTitle": "删除确认",
+    "deleteBody": "确定要删除此记录吗？",
+    "deleteBtn": "删除",
+    "updateConfirmTitle": "更新确认",
+    "updateConfirmBody": "库存已成功更新。",
+    "addConfirmTitle": "添加确认",
+    "addConfirmBody": "新商品已成功添加。",
+    "editTitle": "编辑数据",
+    "editUpdateBtn": "更新",
+    "addTitle": "新增商品",
+    "addBtn": "添加",
+    "okBtn": "确定",
+    "closeBtn": "关闭"
+  },
+  "form": {
+    "labelItemName": "商品名称",
+    "labelQuantity": "数量",
+    "labelType": "类型",
+    "labelUnitPrice": "单价",
+    "labelTotalPrice": "总价",
+    "placeholder": "请输入值。"
+  },
+  "upload": {
+    "ariaLabel": "上传库存数据文件"
+  },
+  "tableAction": {
+    "editItem": "编辑商品",
+    "deleteItem": "删除商品"
+  },
+  "loading": {
+    "default": "请稍候...",
+    "spinner": "加载中...",
+    "openingForm": "正在打开表单，请稍候...",
+    "savingData": "正在保存数据，请稍候...",
+    "preparingNew": "正在准备新数据，请稍候...",
+    "loadingData": "正在加载数据，请稍候...",
+    "openingDelete": "正在打开删除确认，请稍候...",
+    "deletingItem": "正在删除商品，请稍候...",
+    "openingEdit": "正在打开编辑表单，请稍候...",
+    "updatingItem": "正在更新商品，请稍候...",
+    "addingItem": "正在添加商品，请稍候..."
+  },
+  "error": {
+    "actionFailed": "操作无法完成，请重试。",
+    "duplicateName": "错误：商品名称已存在！请使用其他名称。",
+    "fileLoadFailed": "所选文件无法加载，请检查文件后重试。",
+    "fileReadFailed": "所选文件无法读取，请重试。"
+  },
+  "misc": {
+    "designAlert": "你好！这些按钮只是为了设计美观而添加的 :3",
+    "emptyGifAlt": "暂无库存数据"
+  }
+}

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+  <title>Privacy Policy — UNIQLO Inventory System</title>
+  <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:400,600,700,800">
+  <style>
+    body {
+      font-family: Nunito, Arial, sans-serif;
+      background-color: #e50012;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    .priv-wrapper {
+      max-width: 760px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+      overflow: hidden;
+    }
+    .priv-header {
+      background: #e50012;
+      color: #fff;
+      padding: 28px 36px 22px;
+    }
+    .priv-header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      margin: 0 0 4px;
+      letter-spacing: 0.5px;
+    }
+    .priv-header .subtitle {
+      font-size: 13px;
+      opacity: 0.85;
+      margin: 0;
+    }
+    .priv-body {
+      padding: 32px 36px;
+      color: #333;
+    }
+    .priv-body h2 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #e50012;
+      margin-top: 28px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .priv-body h2:first-child {
+      margin-top: 0;
+    }
+    .priv-body p, .priv-body li {
+      font-size: 14px;
+      line-height: 1.75;
+      color: #444;
+    }
+    .priv-body ul {
+      padding-left: 20px;
+      margin-bottom: 0;
+    }
+    .key-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    .key-table th {
+      background: #e50012;
+      color: #fff;
+      padding: 8px 14px;
+      text-align: left;
+      font-weight: 700;
+    }
+    .key-table td {
+      padding: 8px 14px;
+      border-bottom: 1px solid #eee;
+      color: #444;
+      vertical-align: top;
+    }
+    .key-table tr:last-child td {
+      border-bottom: none;
+    }
+    .key-table tr:nth-child(even) td {
+      background: #fafafa;
+    }
+    .lang-divider {
+      border: none;
+      border-top: 1.5px solid #e50012;
+      margin: 36px 0;
+      opacity: 0.2;
+    }
+    .back-btn {
+      display: inline-block;
+      margin-top: 28px;
+      padding: 9px 26px;
+      background: #e50012;
+      color: #fff;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      letter-spacing: 0.3px;
+      transition: background 0.15s;
+    }
+    .back-btn:hover {
+      background: #b8000f;
+      color: #fff;
+      text-decoration: none;
+    }
+    .priv-footer {
+      padding: 16px 36px;
+      background: #f7f7f7;
+      font-size: 12px;
+      color: #999;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+
+<div class="priv-wrapper">
+  <div class="priv-header">
+    <h1>Privacy Policy</h1>
+    <p class="subtitle">UNIQLO Inventory Management System &mdash; Local Data Usage</p>
+  </div>
+
+  <div class="priv-body">
+
+    <!-- ENGLISH -->
+    <h2>What data is stored?</h2>
+    <p>
+      This application runs entirely in your browser. No data is sent to any server or shared with any third party.
+      When you grant consent, the following information is saved in your browser's <strong>localStorage</strong>:
+    </p>
+    <table class="key-table">
+      <thead>
+        <tr><th>Storage Key</th><th>Purpose</th><th>When stored</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>DATATABLE_INVENTORY_DATA</code></td>
+          <td>Your inventory table rows (item names, quantities, types, prices).</td>
+          <td>When you click <em>Save Data</em> or close the page after consenting.</td>
+        </tr>
+        <tr>
+          <td><code>app.language</code></td>
+          <td>Your selected display language (English or Chinese).</td>
+          <td>When you switch the language using the EN / 中文 buttons.</td>
+        </tr>
+        <tr>
+          <td><code>app.cookieConsent</code></td>
+          <td>Your consent choice (<em>accepted</em> or <em>declined</em>).</td>
+          <td>When you click <em>Accept</em> or <em>Decline</em> in the consent banner.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>What if I decline?</h2>
+    <p>
+      If you click <strong>Decline</strong>, your inventory data will <em>not</em> be persisted between sessions.
+      You can still use the application fully within the current browser session, but your data will be lost when you close or refresh the page.
+      Your consent choice itself (<code>app.cookieConsent</code>) is always stored so the banner does not re-appear on every page load.
+    </p>
+
+    <h2>How to withdraw consent</h2>
+    <p>
+      You can remove all locally stored data at any time by clearing your browser's localStorage for this site:
+    </p>
+    <ul>
+      <li>Open your browser's Developer Tools (F12 or Cmd+Option+I on Mac).</li>
+      <li>Go to <strong>Application → Local Storage</strong>.</li>
+      <li>Select this page's origin and delete the keys listed above.</li>
+    </ul>
+    <p>After clearing, the consent banner will appear again on your next visit.</p>
+
+    <h2>Third parties &amp; tracking</h2>
+    <p>
+      This application does <strong>not</strong> use cookies, tracking pixels, analytics scripts, or any external services that process your personal data.
+      Google Fonts CSS is loaded from Google's CDN for display purposes only; no inventory data is shared.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      This is a demonstration project. For questions about data handling, please contact the application maintainer directly.
+    </p>
+
+    <hr class="lang-divider">
+
+    <!-- CHINESE -->
+    <h2>存储了哪些数据？</h2>
+    <p>
+      本应用程序完全在您的浏览器中运行。数据不会发送到任何服务器，也不会与任何第三方共享。
+      在您授权同意后，以下信息将保存在浏览器的 <strong>localStorage</strong> 中：
+    </p>
+    <table class="key-table">
+      <thead>
+        <tr><th>存储键</th><th>用途</th><th>存储时机</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>DATATABLE_INVENTORY_DATA</code></td>
+          <td>您的库存表格数据（商品名称、数量、类型、价格）。</td>
+          <td>点击"保存数据"或在同意后关闭页面时。</td>
+        </tr>
+        <tr>
+          <td><code>app.language</code></td>
+          <td>您选择的显示语言（英文或中文）。</td>
+          <td>点击 EN / 中文 切换按钮时。</td>
+        </tr>
+        <tr>
+          <td><code>app.cookieConsent</code></td>
+          <td>您的同意选择（<em>accepted</em> 或 <em>declined</em>）。</td>
+          <td>点击横幅中的"同意"或"拒绝"时。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>如果我拒绝会怎样？</h2>
+    <p>
+      若您点击<strong>拒绝</strong>，库存数据将<em>不会</em>在会话之间持久化。
+      当前浏览器会话中您仍可完整使用本应用，但关闭或刷新页面后数据将丢失。
+      您的同意选择本身（<code>app.cookieConsent</code>）始终会被记录，以避免横幅在每次加载时重复出现。
+    </p>
+
+    <h2>如何撤回同意</h2>
+    <p>
+      您可以随时通过清除浏览器的 localStorage 来删除所有本地存储的数据：
+    </p>
+    <ul>
+      <li>打开浏览器开发者工具（F12 或 Mac 上按 Cmd+Option+I）。</li>
+      <li>进入 <strong>应用程序 → Local Storage</strong>。</li>
+      <li>选择本页面的来源，删除上方列出的键。</li>
+    </ul>
+    <p>清除后，下次访问时同意横幅将再次出现。</p>
+
+    <h2>第三方与数据追踪</h2>
+    <p>
+      本应用<strong>不使用</strong> Cookie、追踪像素、分析脚本或任何处理您个人数据的外部服务。
+      Google Fonts CSS 从 Google CDN 加载，仅用于字体显示，不涉及库存数据共享。
+    </p>
+
+    <h2>联系方式</h2>
+    <p>
+      本项目为演示用途。如有数据处理相关问题，请直接联系应用维护者。
+    </p>
+
+    <a href="index.html" class="back-btn">&larr; Back to Inventory System &nbsp;/&nbsp; 返回库存系统</a>
+  </div>
+
+  <div class="priv-footer">
+    Last updated: 2025 &nbsp;&bull;&nbsp; UNIQLO Inventory Management System
+  </div>
+</div>
+
+</body>
+</html>
