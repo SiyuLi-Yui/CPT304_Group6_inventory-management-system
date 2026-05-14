@@ -1,36 +1,60 @@
-# Web-Based Inventory Management System
-This repository contains the source code for a web-based inventory management system with CRUD functionality. The theme of the web app follows the famous clothing brand, named 'UNIQLO'. This project was created for one of my internship interview's technical assessment.
+# UNIQLO Inventory Management System
 
-A live demo version can be accessed through the following link:<br />
-~~https://gray-flower-0ce0a4e10.5.azurestaticapps.net/~~ <sub>The website is currently offline.</sub>
+[![codecov](https://codecov.io/gh/LixinyuLu/CPT304_Group6_UNIQLO_InventorySystem/branch/main/graph/badge.svg)](https://codecov.io/gh/LixinyuLu/CPT304_Group6_UNIQLO_InventorySystem)
+[![Tests](https://img.shields.io/badge/tests-124%20passing-brightgreen)](https://github.com/LixinyuLu/CPT304_Group6_UNIQLO_InventorySystem)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/LixinyuLu/CPT304_Group6_UNIQLO_InventorySystem)
 
-## JavaScript Libraries/Frameworks
-- Bootstrap 5
-- DataTables
-- jQuery
+A browser-based inventory management system for UNIQLO products. Built with jQuery, DataTables, and Bootstrap — no build step required.
 
-## Code Structure
-- [index.html](https://github.com/julianganjs/inventory-management-system/blob/main/index.html): The main code for the website.
-- [assets](https://github.com/julianganjs/inventory-management-system/tree/main/assets): Contains all the styles, libraries, fonts and frameworks needed for the website to work and look properly.
-- [DB.txt](https://github.com/julianganjs/inventory-management-system/blob/main/DB.txt): An existing database file in JSON format to be imported into the inventory system.
+## Features
 
-## Usage
-1. Clone this repository.
-2. Download [index.html](https://github.com/julianganjs/inventory-management-system/blob/main/index.html), [assets](https://github.com/julianganjs/inventory-management-system/tree/main/assets) and [DB.txt](https://github.com/julianganjs/inventory-management-system/blob/main/DB.txt) into the same directory.
-3. Open index.html using your default browser.
-4. Select `LOAD DATA` if you wish to import an existing database file or `NEW DATA` to create a new entry.
-5. Select `SAVE DATA` if you wish to export the edited data into a local file.
+- Add, edit, and delete inventory items
+- Import / export data via `.db` files
+- Persistent storage via `localStorage` (with cookie consent)
+- English / Chinese (中文) i18n support
+- Privacy-compliant: Cookie consent banner + Privacy Policy page
 
-## Examples
-- ### Main Screen (w/o Data)
-  <img src="https://github.com/julianganjs/inventory-management-system/assets/127673790/28508f25-43f3-4033-974e-30bf848c5345" width="650vw">
-- ### Main Screen (w/ Data)
-  <img src="https://github.com/julianganjs/inventory-management-system/assets/127673790/2a5690c7-9541-484b-b70e-4c1c3ba93b53" width="650vw">
-- ### Add New Item
-  <img src="https://github.com/julianganjs/inventory-management-system/assets/127673790/1f0a4b09-79db-439a-918b-9c2aec184583" width="650vw">
-  <br>A modal dialog pops up when an item needs to be added, updated or deleted. The total price is automatically calculated based on the quantity and unit price.<br>
-- ### Delete Item
-  <img src="https://github.com/julianganjs/inventory-management-system/assets/127673790/a9f44cd1-00b3-4783-a755-6e62da980514" width="650vw">
+## Getting Started
 
-## License
-This project is licensed under the MIT License.
+Open `index.html` directly in your browser (no server needed).
+
+## Development
+
+```bash
+# Install dev dependencies
+npm install
+
+# Run tests
+npm test
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+Coverage reports are generated in the `coverage/` folder.
+
+## Project Structure
+
+```
+index.html          Main application
+privacy.html        Privacy Policy page
+src/
+  i18n.js           Internationalisation module (i18next)
+  utils.js          Pure utility functions
+i18/
+  en.json           English translations (reference)
+  zh.json           Chinese translations (reference)
+tests/              Vitest test files
+assets/             CSS, JS, font, and image assets
+.github/workflows/  GitHub Actions CI (test + Codecov upload)
+```
+
+## Coverage
+
+Unit tests cover `src/utils.js` and `src/i18n.js`.
+Coverage is uploaded to [Codecov](https://codecov.io) on every push to `main`.
+
+## Privacy
+
+This application stores data locally in the browser using `localStorage`.
+No data is sent to any server. See [privacy.html](privacy.html) for the full policy.

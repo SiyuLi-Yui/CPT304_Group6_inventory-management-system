@@ -1,15 +1,17 @@
 {
-  "name": "inventory-management-system-main",
-  "version": "1.0.0",
-  "description": "This repository contains the source code for a web-based inventory management system with CRUD functionality. The theme of the web app follows the famous clothing brand, named 'UNIQLO'. This project was created for one of my internship interview's technical assessment.",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.5",
+    "jest": "^30.4.2",
+    "jsdom": "^29.1.1",
+    "vitest": "^4.1.5"
+  },
   "dependencies": {
-    "playwright": "^1.59.1"
+    "i18next": "^26.0.8"
   }
 }

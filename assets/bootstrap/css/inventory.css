@@ -163,18 +163,33 @@
 table.dataTable thead th.sorting,
 table.dataTable thead th.sorting_asc,
 table.dataTable thead th.sorting_desc {
-    padding-right: 10px !important;   
-    padding-left: 26px !important;    
+    padding-right: 10px !important;   /* 收回右侧空间 */
+    padding-left: 26px !important;    /* 左侧留出箭头位置 */
     position: relative;
 }
 
 table.dataTable thead th:before,
 table.dataTable thead th:after {
-    right: auto !important;           
-    left: 10px !important;             
+    right: auto !important;           /* 取消默认右侧定位 */
+    left: 10px !important;             /* 箭头固定在左侧 */
 }
 
 /* 确保表头文字左对齐，不被箭头遮挡 */
 table.dataTable thead th {
     text-align: left !important;
+}
+
+/* 隐藏 scrollY 模式下滚动体内的重复表头（列宽占位保留，视觉不可见，高度压缩为零） */
+.dataTables_scrollBody thead tr {
+    visibility: hidden;
+    height: 0;
+    line-height: 0;
+}
+.dataTables_scrollBody thead tr th {
+    height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: 0 !important;
+    border-top: none !important;
+    border-bottom: none !important;
 }
